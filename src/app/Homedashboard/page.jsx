@@ -46,10 +46,6 @@ const page = ({ goToReport }) => {
   };
 
   const { width, height } = useWindowSize();
-<<<<<<< HEAD
-=======
-  // console.log("Screen Width:", width, "Screen Height:", height);
->>>>>>> adb24eb8ed0a136d7b8fd034cc6b35e489922c2d
 
   const [selected, setSelected] = useState(0);
 
