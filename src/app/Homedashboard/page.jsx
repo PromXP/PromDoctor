@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-
+import axios from "axios";
 import Image from "next/image";
 
 import { Poppins } from "next/font/google";
@@ -46,167 +46,47 @@ const page = ({ goToReport }) => {
   };
 
   const { width, height } = useWindowSize();
+<<<<<<< HEAD
+=======
+  // console.log("Screen Width:", width, "Screen Height:", height);
+>>>>>>> adb24eb8ed0a136d7b8fd034cc6b35e489922c2d
 
   const [selected, setSelected] = useState(0);
 
   const handleSelect = (index) => {
     setSelected(index);
   };
+  const [userData, setUserData] = useState(null);
+  useEffect(() => {
+    const storedUser = localStorage.getItem("userData");
+    if (storedUser) {
+      const parsedUser = JSON.parse(storedUser);
+      console.log("Retrieved user from localStorage:", parsedUser);
+      setUserData(parsedUser);
+    }
+  }, []);
 
   const [patients, setPatients] = useState([]);
   const lastTapRef = useRef({});
-  const samplePatients = [
-    {
-      _id: "1",
-      user_id: "JohnDoe",
-      unique_id: "PAT001",
-      vip: 1,
-      PersonalDetails: { Age: 29, Gender: "Male" },
-      surgeryStatus: "PRE OP",
-      surgeryReportStatus: "COMPLETED",
-      score: { oks: 78, "sf-12": 82, koos: 90, kss: 85, fjs: 88 },
-    },
-    {
-      _id: "2",
-      user_id: "JaneSmith",
-      unique_id: "PAT002",
-      vip: 0,
-      PersonalDetails: { Age: 34, Gender: "Female" },
-      surgeryStatus: "6W",
-      surgeryReportStatus: "PENDING",
-      score: { oks: 70, "sf-12": 75, koos: 72, kss: 78, fjs: 74 },
-    },
-    {
-      _id: "3",
-      user_id: "MikeJohnson",
-      unique_id: "PAT003",
-      vip: 1,
-      PersonalDetails: { Age: 42, Gender: "Male" },
-      surgeryStatus: "3M",
-      surgeryReportStatus: "COMPLETED",
-      score: { oks: 88, "sf-12": 91, koos: 89, kss: 87, fjs: 92 },
-    },
-    {
-      _id: "4",
-      user_id: "EmilyDavis",
-      unique_id: "PAT004",
-      vip: 0,
-      PersonalDetails: { Age: 26, Gender: "Female" },
-      surgeryStatus: "6M",
-      surgeryReportStatus: "NOT ASSIGNED",
-      score: { oks: 66, "sf-12": 70, koos: 65, kss: 68, fjs: 72 },
-    },
-    {
-      _id: "5",
-      user_id: "DavidMiller",
-      unique_id: "PAT005",
-      vip: 1,
-      PersonalDetails: { Age: 37, Gender: "Male" },
-      surgeryStatus: "1Y",
-      surgeryReportStatus: "PENDING",
-      score: { oks: 81, "sf-12": 85, koos: 84, kss: 83, fjs: 80 },
-    },
-    {
-      _id: "6",
-      user_id: "SarahWilson",
-      unique_id: "PAT006",
-      vip: 0,
-      PersonalDetails: { Age: 31, Gender: "Female" },
-      surgeryStatus: "2Y",
-      surgeryReportStatus: "COMPLETED",
-      score: { oks: 90, "sf-12": 92, koos: 91, kss: 93, fjs: 89 },
-    },
-    {
-      _id: "7",
-      user_id: "RobertBrown",
-      unique_id: "PAT007",
-      vip: 1,
-      PersonalDetails: { Age: 45, Gender: "Male" },
-      surgeryStatus: "PRE OP",
-      surgeryReportStatus: "PENDING",
-      score: { oks: 75, "sf-12": 77, koos: 74, kss: 76, fjs: 73 },
-    },
-    {
-      _id: "8",
-      user_id: "OliviaTaylor",
-      unique_id: "PAT008",
-      vip: 0,
-      PersonalDetails: { Age: 28, Gender: "Female" },
-      surgeryStatus: "6W",
-      surgeryReportStatus: "NOT ASSIGNED",
-      score: { oks: 69, "sf-12": 70, koos: 68, kss: 66, fjs: 67 },
-    },
-    {
-      _id: "9",
-      user_id: "DanielAnderson",
-      unique_id: "PAT009",
-      vip: 1,
-      PersonalDetails: { Age: 39, Gender: "Male" },
-      surgeryStatus: "3M",
-      surgeryReportStatus: "COMPLETED",
-      score: { oks: 85, "sf-12": 88, koos: 86, kss: 87, fjs: 84 },
-    },
-    {
-      _id: "10",
-      user_id: "SophiaMartinez",
-      unique_id: "PAT010",
-      vip: 0,
-      PersonalDetails: { Age: 33, Gender: "Female" },
-      surgeryStatus: "6M",
-      surgeryReportStatus: "PENDING",
-      score: { oks: 77, "sf-12": 80, koos: 79, kss: 76, fjs: 78 },
-    },
-    {
-      _id: "11",
-      user_id: "MatthewThomas",
-      unique_id: "PAT011",
-      vip: 1,
-      PersonalDetails: { Age: 27, Gender: "Male" },
-      surgeryStatus: "1Y",
-      surgeryReportStatus: "NOT ASSIGNED",
-      score: { oks: 70, "sf-12": 72, koos: 68, kss: 69, fjs: 71 },
-    },
-    {
-      _id: "12",
-      user_id: "EmmaWhite",
-      unique_id: "PAT012",
-      vip: 0,
-      PersonalDetails: { Age: 30, Gender: "Female" },
-      surgeryStatus: "2Y",
-      surgeryReportStatus: "COMPLETED",
-      score: { oks: 89, "sf-12": 90, koos: 91, kss: 92, fjs: 88 },
-    },
-    {
-      _id: "13",
-      user_id: "JamesHarris",
-      unique_id: "PAT013",
-      vip: 1,
-      PersonalDetails: { Age: 41, Gender: "Male" },
-      surgeryStatus: "PRE OP",
-      surgeryReportStatus: "PENDING",
-      score: { oks: 73, "sf-12": 75, koos: 76, kss: 74, fjs: 72 },
-    },
-    {
-      _id: "14",
-      user_id: "IsabellaClark",
-      unique_id: "PAT014",
-      vip: 0,
-      PersonalDetails: { Age: 36, Gender: "Female" },
-      surgeryStatus: "6W",
-      surgeryReportStatus: "NOT ASSIGNED",
-      score: { oks: 67, "sf-12": 68, koos: 65, kss: 66, fjs: 64 },
-    },
-    {
-      _id: "15",
-      user_id: "WilliamLewis",
-      unique_id: "PAT015",
-      vip: 1,
-      PersonalDetails: { Age: 38, Gender: "Male" },
-      surgeryStatus: "3M",
-      surgeryReportStatus: "COMPLETED",
-      score: { oks: 87, "sf-12": 89, koos: 88, kss: 86, fjs: 85 },
-    },
-  ];
+
+  useEffect(() => {
+    const fetchPatients = async () => {
+      if (!userData?.user?.email) return;
+      try {
+        const res = await axios.get(
+          `https://promapi.onrender.com/patients/by-doctor/${userData?.user?.email}`
+        );
+        const data = res.data;
+
+        // Optional: Add any transformation or filtering logic here if needed
+        setPatients(data);
+      } catch (err) {
+        console.error("Failed to fetch patients", err);
+      }
+    };
+
+    fetchPatients();
+  }, [userData?.user?.email]);
 
   const makeVip = (id) => {
     const updatedPatients = patients.map((patient) =>
@@ -235,11 +115,6 @@ const page = ({ goToReport }) => {
     lastTapRef.current[id] = now;
   };
 
-  // To set this sample data in your useState
-  useEffect(() => {
-    setPatients(samplePatients);
-  }, []);
-
   const scoreoptions = ["OKS", "SF-12", "KOOS", "KSS", "FJS"];
 
   // Load selected option from localStorage or default to "ALL"
@@ -251,8 +126,33 @@ const page = ({ goToReport }) => {
 
   const postopoptions = ["ALL", "3W", "6W", "3M", "6M", "1Y", "2Y"];
 
-  // Load selected option from localStorage or default to "ALL"
   const [postopfilter, setpostopFitler] = useState("ALL");
+
+  const filteredPatients = patients.filter((patient) => {
+    const status = patient.current_status.toLowerCase();
+    const selectedFilter = patfilter.toLowerCase();
+    const subFilter = postopfilter.toLowerCase();
+
+    if (selectedFilter === "all patients") {
+      return true;
+    }
+
+    if (selectedFilter === "pre operative") {
+      return status.includes("pre");
+    }
+
+    // Anything not "pre" is treated as post-operative
+    if (selectedFilter === "post operative") {
+      if (subFilter === "all") {
+        return !status.includes("pre");
+      }
+      return !status.includes("pre") && status.includes(subFilter);
+    }
+
+    return false;
+  });
+
+  // Load selected option from localStorage or default to "ALL"
 
   const patientData = [
     { name: "Bennett", surgeryStatus: "6W", completed: 5, pending: 2 },
@@ -300,17 +200,18 @@ const page = ({ goToReport }) => {
     }
   };
 
- 
   return (
     <>
       <div className="flex flex-col md:flex-row w-[95%] mx-auto mt-4 items-center justify-between">
         {/* Greeting Section */}
         <div className="flex flex-col md:flex-row items-center md:items-end gap-1 md:gap-2">
           <h4 className="font-medium text-black text-xl md:text-[26px]">
-            Good Morning
+            Welcome
           </h4>
           <h2 className="font-bold text-[#005585] text-2xl md:text-4xl">
-            Dr. Jacob!
+            {userData?.user?.doctor_name
+              ? `${userData.user.doctor_name}`
+              : "Loading..."}
           </h2>
         </div>
 
@@ -360,7 +261,9 @@ const page = ({ goToReport }) => {
                 className="w-8 h-8 rounded-full object-cover"
               />
               <p className="text-sm font-medium text-[#0D0D0D] whitespace-nowrap">
-                Dr. Jacob
+                {userData?.user?.doctor_name
+                  ? `${userData.user.doctor_name}`
+                  : "Loading..."}
               </p>
             </div>
           </div>
@@ -377,7 +280,7 @@ const page = ({ goToReport }) => {
           className={`rounded-xl pt-4 px-4 flex flex-col justify-between pb-4 ${
             width >= 1000 && width / height > 1 ? "w-2/3" : "w-full"
           }
-          ${width<=540 && height<940?"h-[150%]":"h-full"}`}
+          ${width <= 540 && height < 940 ? "h-[150%]" : "h-full"}`}
           style={{
             boxShadow: "0 0px 10px rgba(0, 0, 0, 0.15)",
           }}
@@ -400,7 +303,7 @@ const page = ({ goToReport }) => {
                 className={` bg-[#F5F5F5] rounded-lg py-0.5 px-[3px] w-fit border-2 border-[#191A1D] mt-[12px] ${
                   width < 450 ? "grid grid-cols-3" : "flex"
                 }
-                ${width>1000 && (width/height>1)?"gap-1":"gap-2"}`}
+                ${width > 1000 && width / height > 1 ? "gap-1" : "gap-2"}`}
               >
                 {scoreoptions.map((option) => (
                   <div
@@ -440,7 +343,13 @@ const page = ({ goToReport }) => {
                 ? "bg-gradient-to-b from-[#484E56] to-[#3B4048] text-white shadow-md"
                 : "text-gray-300"
             }
-            ${width < 530 ? "text-[8px] px-2 py-1":width>1000 && (width/height>1)?"text-[10px] px-1.5 py-1" : "text-xs px-3 py-1"}
+            ${
+              width < 530
+                ? "text-[8px] px-2 py-1"
+                : width > 1000 && width / height > 1
+                ? "text-[10px] px-1.5 py-1"
+                : "text-xs px-3 py-1"
+            }
           `}
                   >
                     {option}
@@ -497,9 +406,9 @@ const page = ({ goToReport }) => {
                 : "h-[82.8%]"
             }`}
           >
-            {patients.map((patient) => (
+            {filteredPatients.map((patient) => (
               <div
-                key={patient._id}
+                key={patient.uhid}
                 style={{ backgroundColor: "rgba(0, 85, 133, 0.1)" }}
                 className={`w-full rounded-lg flex relative   my-1 py-2 px-3 ${
                   width < 530
@@ -513,7 +422,7 @@ const page = ({ goToReport }) => {
                     src={Flag}
                     alt="VIP"
                     className="absolute top-0 left-0 w-5 h-5 cursor-pointer"
-                    onClick={() => toggleVip(patient._id)}
+                    onClick={() => toggleVip(patient.uhid)}
                   />
                 )}
 
@@ -542,10 +451,10 @@ const page = ({ goToReport }) => {
                           : "w-10 h-10"
                       }`}
                       src={Patientimg}
-                      alt={patient.user_id}
-                      onDoubleClick={() => makeVip(patient._id)}
-                      onTouchEnd={() => handleProfileInteraction(patient._id)}
-                      onClick={() => handleProfileInteraction(patient._id)}
+                      alt={patient.uhid}
+                      onDoubleClick={() => makeVip(patient.uhid)}
+                      onTouchEnd={() => handleProfileInteraction(patient.uhid)}
+                      onClick={() => handleProfileInteraction(patient.uhid)}
                     />
 
                     <div
@@ -564,7 +473,7 @@ const page = ({ goToReport }) => {
                               width < 530 ? "w-full text-center" : ""
                             }`}
                           >
-                            {patient.user_id}
+                            {patient.first_name + " " + patient.last_name}
                           </p>
                         </div>
                         <p
@@ -572,8 +481,7 @@ const page = ({ goToReport }) => {
                             width < 530 ? "text-center" : "text-start"
                           }`}
                         >
-                          {patient.PersonalDetails.Age},{" "}
-                          {patient.PersonalDetails.Gender}
+                          {patient.age}, {patient.gender}
                         </p>
                       </div>
 
@@ -593,9 +501,9 @@ const page = ({ goToReport }) => {
                               : ""
                           }`}
                         >
-                          {patient.surgeryReportStatus}
+                          {patient.uhid}
                         </p>
-                        <p> UHID {patient.unique_id} </p>
+                        <p> UHID {patient.uhid} </p>
                       </div>
                     </div>
                   </div>
@@ -629,7 +537,7 @@ const page = ({ goToReport }) => {
                           : "w-[35%] text-end"
                       }`}
                     >
-                      {patient.surgeryStatus}
+                      {patient.current_status}
                     </div>
                     <div
                       className={`text-base font-medium text-black ${
@@ -641,7 +549,11 @@ const page = ({ goToReport }) => {
                       }`}
                     >
                       SCORE:&nbsp;&nbsp;
-                      {patient.score[scorefilter.toLowerCase()]}
+                      {patient.questionnaire_scores?.find((score) =>
+                        score.name
+                          ?.toLowerCase()
+                          .includes(scorefilter.toLowerCase())
+                      )?.score ?? "N/A"}
                     </div>
                   </div>
 
