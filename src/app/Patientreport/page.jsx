@@ -194,7 +194,7 @@ const page = () => {
   };
 
   const { width, height } = useWindowSize();
-  console.log("Screen Width:", width, "Screen Height:", height);
+  // console.log("Screen Width:", width, "Screen Height:", height);
 
   const data = [
     { name: "-3", oks: 32, sf12: 70, koos: 68, kss: 72, fjs: 65 },

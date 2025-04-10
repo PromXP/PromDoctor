@@ -37,7 +37,7 @@ const page = () => {
   };
 
   const { width, height } = useWindowSize();
-  console.log("Screen Width:", width, "Screen Height:", height);
+  // console.log("Screen Width:", width, "Screen Height:", height);
 
   const [selected, setSelected] = useState("home");
 

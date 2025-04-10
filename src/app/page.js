@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-
+import axios from "axios";
 import Image from "next/image";
 
 import { Poppins } from "next/font/google";
@@ -39,8 +39,32 @@ export default function Home() {
   };
 
   const { width, height } = useWindowSize();
-  console.log("Screen Width:", width, "Screen Height:", height);
+  // console.log("Screen Width:", width, "Screen Height:", height);
   const router = useRouter();
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
+
+  const handleLogin = async () => {
+    try {
+      const response = await axios.post("https://promapi.onrender.com/login", {
+        identifier,
+        password,
+        role: "doctor", // 🔒 Fixed to "doctor"
+      });
+  
+      console.log("Login successful:", response.data);
+  
+      // Store login data for access on /Landing page
+      localStorage.setItem("userData", JSON.stringify(response.data));
+  
+      // Redirect to landing page
+      router.push("/Landing");
+    } catch (error) {
+      console.error("Login failed:", error.response?.data || error.message);
+      alert("Login failed. Please check your credentials.");
+    }
+  };
+
   return (
     <>
       {width > height && (
@@ -70,11 +94,13 @@ export default function Home() {
             <div className="w-full max-w-lg flex flex-col gap-8">
               <div className="relative w-full">
                 <label className="absolute left-4 -top-2 bg-white px-1 text-[#005585] text-sm">
-                  Username
+                Email / Phone / UHID
                 </label>
                 <input
                   type="text"
                   className="w-full text-black py-3 px-4 border-[1.6px] border-[#79747E] rounded-sm text-lg focus:border-[#005585] outline-none"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
                 />
               </div>
 
@@ -85,6 +111,8 @@ export default function Home() {
                 <input
                   type="password"
                   className="w-full text-black py-3 px-4 border-[1.6px] border-[#79747E] rounded-sm text-lg focus:border-[#005585] outline-none"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
 
@@ -108,7 +136,7 @@ export default function Home() {
                 </p>
               </div>
 
-              <button className="w-full bg-[#005585] text-lg text-white py-2.5 rounded-lg cursor-pointer" onClick={() => router.push("/Landing")}>
+              <button className="w-full bg-[#005585] text-lg text-white py-2.5 rounded-lg cursor-pointer" onClick={handleLogin}>
                 Login
               </button>
             </div>
@@ -181,11 +209,13 @@ export default function Home() {
             <div className="w-full max-w-lg flex flex-col gap-8">
               <div className="relative w-full">
                 <label className="absolute left-4 -top-2 bg-white px-1 text-[#005585] text-sm">
-                  Username
+                Email / Phone / UHID
                 </label>
                 <input
                   type="text"
                   className="w-full text-black py-3 px-4 border-[1.6px] border-[#79747E] rounded-sm text-lg focus:border-[#005585] outline-none"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
                 />
               </div>
 
@@ -196,6 +226,8 @@ export default function Home() {
                 <input
                   type="password"
                   className="w-full text-black py-3 px-4 border-[1.6px] border-[#79747E] rounded-sm text-lg focus:border-[#005585] outline-none"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
 
@@ -219,7 +251,7 @@ export default function Home() {
                 </p>
               </div>
 
-              <button className="w-full bg-[#005585] text-lg text-white py-2.5 rounded-lg cursor-pointer">
+              <button className="w-full bg-[#005585] text-lg text-white py-2.5 rounded-lg cursor-pointer" onClick={handleLogin}>
                 Login
               </button>
             </div>
