@@ -181,18 +181,6 @@ const page = ({ goToReport }) => {
     return false;
   });
 
-  // Load selected option from localStorage or default to "ALL"
-
-  const patientData = [
-    { name: "Bennett", surgeryStatus: "6W", completed: 5, pending: 2 },
-    { name: "Sophia", surgeryStatus: "3M", completed: 8, pending: 0 },
-    { name: "Liam", surgeryStatus: "6M", completed: 12, pending: 3 },
-    { name: "Olivia", surgeryStatus: "1Y", completed: 20, pending: 4 },
-    { name: "Noah", surgeryStatus: "2Y", completed: 15, pending: 0 },
-    { name: "Emma", surgeryStatus: "6W", completed: 9, pending: 0 },
-    { name: "Mason", surgeryStatus: "3M", completed: 7, pending: 0 },
-    { name: "Ava", surgeryStatus: "1Y", completed: 11, pending: 3 },
-  ];
 
   const [patprogressfilter, setpatprogressFilter] = useState("ALL");
 
@@ -610,7 +598,7 @@ const page = ({ goToReport }) => {
                           ? "w-full justify-center"
                           : ""
                       }`}
-                      onClick={goToReport}
+                      onClick={() => goToReport(patient)}
                     >
                       <div className="text-sm font-medium border-b-2 text-[#476367] border-blue-gray-500 cursor-pointer">
                         Report

@@ -174,7 +174,7 @@ const useBoxPlot = (boxPlots) => {
   );
 };
 
-const page = () => {
+const page = ({patient }) => {
   const useWindowSize = () => {
     const [size, setSize] = useState({
       width: 0,
@@ -275,7 +275,7 @@ const page = () => {
     })
   );
 
-  console.log("Box plot:", JSON.stringify(databox, null, 2));
+  // console.log("Box plot:", JSON.stringify(databox, null, 2));
 
   const [isOpen, setIsOpen] = useState(false);
 
@@ -331,7 +331,7 @@ const page = () => {
                           width < 530 ? "text-start" : ""
                         }`}
                       >
-                        ALEX HALES
+                        {patient.first_name+" "+patient.last_name}
                       </p>
                     </div>
                     <div
@@ -347,14 +347,14 @@ const page = () => {
                         }
                           w-1/2`}
                       >
-                        25, Male
+                        {patient.age}, {patient.gender}
                       </p>
                       <div
                         className={`text-sm font-normal font-poppins text-[#475467] w-1/2 ${
                           width < 530 ? "text-center" : ""
                         }`}
                       >
-                        UHID 12345678
+                        UHID {patient.uhid}
                       </div>
                     </div>
                   </div>
@@ -377,7 +377,7 @@ const page = () => {
                       }`}
                     >
                       <p className="text-[#475467] font-semibold text-5">BMI</p>
-                      <p className="text-[#04CE00] font-bold text-6">22.8</p>
+                      <p className="text-[#04CE00] font-bold text-6">{patient.bmi}</p>
                     </div>
                     <div
                       className={` flex flex-col gap-3 ${
@@ -390,7 +390,7 @@ const page = () => {
                         STATUS
                       </p>
                       <p className="text-[#F86060] font-bold text-6">
-                        POST OPERATIVE
+                        {patient.current_status}
                       </p>
                     </div>
                     <div
@@ -1547,7 +1547,7 @@ const page = () => {
         </div>
       </div>
 
-      <Surgeryreport isOpen={isOpen} onClose={()=>setIsOpen(false)}/>
+      <Surgeryreport isOpen={isOpen} onClose={() => setIsOpen(false)} patient={patient} />
     </>
   );
 };

@@ -12,7 +12,18 @@ import Image from "next/image";
 import Closeicon from "@/app/assets/closeicon.png";
 import Calendar from "@/app/assets/calendar.png";
 
-const page = ({ isOpen, onClose, children }) => {
+const page = ({ isOpen, onClose, patient  }) => {
+
+  const [userData, setUserData] = useState(null);
+    useEffect(() => {
+      const storedUser = localStorage.getItem("userData");
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        console.log("Retrieved user from localStorage:", parsedUser);
+        setUserData(parsedUser);
+      }
+    }, []);
+
   const useWindowSize = () => {
     const [size, setSize] = useState({
       width: 0,
@@ -63,7 +74,7 @@ const page = ({ isOpen, onClose, children }) => {
 
   const [warning, setWarning] = useState("");
 
-  const surgerydatacheck = () => {
+  const surgerydatacheck = async () => {
     if (selectedDate.trim() === "") {
       setWarning("Select Surgery Date");
       return;
@@ -77,14 +88,54 @@ const page = ({ isOpen, onClose, children }) => {
       return;
     }
     if (implant.trim() === "") {
-      setWarning("Enter Implante Name");
+      setWarning("Enter Implant Name");
       return;
     }
     if (technology.trim() === "") {
       setWarning("Enter Technology Name");
       return;
     }
+  
+    const payload = {
+      uhid: patient?.uhid || "", // ensure patient object is passed as prop
+      post_surgery_details: {
+        date_of_surgery: new Date(selectedDate).toISOString().split("T")[0],
+        surgeon: userData?.user?.doctor_name, // hardcoded for now
+        surgery_name: surgery,
+        procedure: procedure,
+        implant: implant,
+        technology: technology,
+      },
+    };
+  
+    try {
+      const response = await fetch("https://promapi.onrender.com/update-post-surgery-details", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+  
+      const result = await response.json();
+  
+      if (!response.ok) {
+        setWarning(result.detail || "Failed to update surgery details");
+        return;
+      }
+      console.log("Successfully updated");
+      setWarning("Surgery details updated successfully!");
+      setTimeout(() => {
+        setWarning("");
+        onClose(); // close the modal
+      }, 2000);
+  
+    } catch (error) {
+      console.error("Error:", error);
+      setWarning("Something went wrong while updating.");
+    }
   };
+  
 
   useEffect(() => {
     if (warning) {
@@ -176,7 +227,7 @@ const page = ({ isOpen, onClose, children }) => {
                     SURGEON
                   </p>
                   <p className="font-medium italic text-[#475467] text-sm">
-                    Dr. Jacob
+                    {userData.user.doctor_name}
                   </p>
                 </div>
               </div>

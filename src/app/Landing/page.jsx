@@ -43,6 +43,13 @@ const page = () => {
   const { width, height } = useWindowSize();
 
   const [selected, setSelected] = useState("home");
+const [selectedPatient, setSelectedPatient] = useState(null);
+
+// This will be passed to HomeDashboard
+const handleGoToReport = (patient) => {
+  setSelectedPatient(patient);
+  setSelected("report");
+};
 
   const handleSelect = (index) => {
     setSelected(index);
@@ -53,9 +60,9 @@ const page = () => {
   const renderSelectedComponent = () => {
     switch (selected) {
       case "home":
-        return <HomeDashboard goToReport={() => setSelected("report")}/>;
-      case "report":
-        return <Patientreport />;
+      return <HomeDashboard goToReport={handleGoToReport} />;
+    case "report":
+      return <Patientreport patient={selectedPatient} />;
       default:
         return null;
     }
