@@ -64,18 +64,51 @@ const page = ({ goToReport }) => {
 
   const [patients, setPatients] = useState([]);
   const lastTapRef = useRef({});
+  const [preOpCount, setPreOpCount] = useState(0);
+  const [postOpStages, setPostOpStages] = useState({});
+  const [postOpTotal, setPostOpTotal] = useState(0);
 
   useEffect(() => {
     const fetchPatients = async () => {
       if (!userData?.user?.email) return;
+
       try {
         const res = await axios.get(
           `https://promapi.onrender.com/patients/by-doctor/${userData?.user?.email}`
         );
         const data = res.data;
 
-        // Optional: Add any transformation or filtering logic here if needed
-        setPatients(data);
+        setPatients(data); // Still store the patients
+
+        // Count pre-op patients
+        const preOp = data.filter((patient) =>
+          patient.questionnaire_assigned?.some(
+            (q) => q.period?.toLowerCase() === "pre op"
+          )
+        ).length;
+        setPreOpCount(preOp);
+
+        // Count current_status values
+        const stageCounts = {
+          "3W": 0,
+          "6W": 0,
+          "3M": 0,
+          "6M": 0,
+          "1Y": 0,
+          "2Y": 0,
+        };
+
+        data.forEach((patient) => {
+          const status = patient.current_status?.toUpperCase();
+          if (stageCounts.hasOwnProperty(status)) {
+            stageCounts[status]++;
+          }
+        });
+
+        setPostOpStages(stageCounts); // If needed individually
+        setPostOpTotal(
+          Object.values(stageCounts).reduce((sum, val) => sum + val, 0)
+        ); // For one number display
       } catch (err) {
         console.error("Failed to fetch patients", err);
       }
@@ -195,6 +228,17 @@ const page = ({ goToReport }) => {
       }
     }
   };
+
+  const displayedPatients = patients.filter((patient) => {
+    const status = patient.current_status?.toLowerCase() || "";
+    const selectedFilter = patprogressfilter.toLowerCase();
+
+    if (selectedFilter === "all") return true;
+    if (selectedFilter === "pre op") return status.includes("pre");
+    if (selectedFilter === "post op") return !status.includes("pre");
+
+    return false;
+  });
 
   return (
     <>
@@ -632,7 +676,7 @@ const page = ({ goToReport }) => {
                   width < 1060 && width >= 1000 ? "text-3xl" : "text-4xl"
                 }`}
               >
-                53
+                {preOpCount}
               </p>
             </div>
 
@@ -663,7 +707,7 @@ const page = ({ goToReport }) => {
                   width < 1060 && width >= 1000 ? "text-3xl" : "text-4xl"
                 }`}
               >
-                53
+                {postOpTotal}
               </p>
             </div>
           </div>
@@ -710,25 +754,26 @@ const page = ({ goToReport }) => {
               {width >= 1272 && (
                 <div className="w-full h-[90%] flex flex-row justify-start gap-2">
                   <div className="justify-start grid grid-cols-2  w-5/6 h-full overflow-y-scroll flex-grow ">
-                    {patientData.map((item, index) => (
+                    {displayedPatients.map((item, index) => (
                       <div
                         key={index}
-                        onClick={() => setIsOpenrem(true)}
                         className={`w-[100px] h-37 bg-white shadow-md rounded-xl p-2.5 m-2 relative flex flex-col justify-between 
-                              ${
-                                item.pending > 0
-                                  ? "shadow-lg shadow-red-500 "
-                                  : "shadow-md shadow-gray-300"
-                              }`}
+                          ${
+                            item.questionnaire_assigned?.filter(
+                              (q) => q.completed === 0
+                            ).length > 0
+                              ? "shadow-lg shadow-red-500 cursor-pointer"
+                              : "shadow-md shadow-gray-300"
+                          }`}
                       >
                         {/* Patient Name */}
                         <p className="text-[#475467] text-base font-medium text-center mt-3">
-                          {item.name}
+                          {item.first_name + " " + item.last_name}
                         </p>
 
                         {/* Status */}
                         <p className="text-gray-400 text-sm font-medium text-center">
-                          {item.surgeryStatus}
+                          {item.current_status}
                         </p>
 
                         {/* Completed */}
@@ -737,7 +782,9 @@ const page = ({ goToReport }) => {
                             COMPLETED
                           </p>
                           <p className="text-green-500 text-sm font-bold">
-                            {item.completed}
+                            {item.questionnaire_assigned?.filter(
+                              (q) => q.completed === 1
+                            ).length || 0}
                           </p>
                         </div>
 
@@ -747,7 +794,9 @@ const page = ({ goToReport }) => {
                             PENDING
                           </p>
                           <p className="text-orange-400 text-sm font-bold">
-                            {item.pending}
+                            {item.questionnaire_assigned?.filter(
+                              (q) => q.completed === 0
+                            ).length || 0}
                           </p>
                         </div>
                       </div>
@@ -794,10 +843,9 @@ const page = ({ goToReport }) => {
                   </div>
 
                   <div className="justify-center grid grid-cols-2  w-full h-full overflow-y-scroll flex-grow ">
-                    {patientData.map((item, index) => (
+                    {displayedPatients.map((item, index) => (
                       <div
                         key={index}
-                        onClick={() => setIsOpenrem(true)}
                         className={`w-[100px] h-37 bg-white shadow-md rounded-xl p-2.5 m-1 relative flex flex-col justify-between 
                               ${
                                 item.pending > 0
@@ -815,12 +863,12 @@ const page = ({ goToReport }) => {
 
                         {/* Patient Name */}
                         <p className="text-[#475467] text-base font-medium text-center mt-3">
-                          {item.name}
+                        {item.first_name + " " + item.last_name}
                         </p>
 
                         {/* Status */}
                         <p className="text-gray-400 text-sm font-medium text-center">
-                          {item.surgeryStatus}
+                          {item.current_status}
                         </p>
 
                         {/* Completed */}
@@ -829,7 +877,9 @@ const page = ({ goToReport }) => {
                             COMPLETED
                           </p>
                           <p className="text-green-500 text-sm font-bold">
-                            {item.completed}
+                          {item.questionnaire_assigned?.filter(
+                              (q) => q.completed === 1
+                            ).length || 0}
                           </p>
                         </div>
 
@@ -839,7 +889,9 @@ const page = ({ goToReport }) => {
                             PENDING
                           </p>
                           <p className="text-orange-400 text-sm font-bold">
-                            {item.pending}
+                          {item.questionnaire_assigned?.filter(
+                              (q) => q.completed === 0
+                            ).length || 0}
                           </p>
                         </div>
                       </div>
@@ -868,16 +920,15 @@ const page = ({ goToReport }) => {
                   </div>
 
                   <div className="flex flex-row overflow-x-scroll w-full h-full p-2 space-x-5">
-                    {patientData.map((item, index) => (
+                    {displayedPatients.map((item, index) => (
                       <div
                         key={index}
-                        onClick={() => setIsOpenrem(true)}
                         className={`min-w-[140px] bg-white shadow-md rounded-xl p-2.5 relative flex flex-col justify-between 
-        ${
-          item.pending > 0
-            ? "shadow-lg shadow-red-500 cursor-pointer"
-            : "shadow-md shadow-gray-300"
-        }`}
+                        ${
+                          item.pending > 0
+                            ? "shadow-lg shadow-red-500 cursor-pointer"
+                            : "shadow-md shadow-gray-300"
+                        }`}
                       >
                         {/* Top Right Arrow Icon */}
                         {item.pending > 0 && (
@@ -889,12 +940,12 @@ const page = ({ goToReport }) => {
 
                         {/* Patient Name */}
                         <p className="text-[#475467] text-base font-medium text-center mt-3">
-                          {item.name}
+                        {item.first_name + " " + item.last_name}
                         </p>
 
                         {/* Status */}
                         <p className="text-gray-400 text-sm font-medium text-center">
-                          {item.surgeryStatus}
+                          {item.current_status}
                         </p>
 
                         {/* Completed */}
@@ -903,7 +954,9 @@ const page = ({ goToReport }) => {
                             COMPLETED
                           </p>
                           <p className="text-green-500 text-sm font-bold">
-                            {item.completed}
+                          {item.questionnaire_assigned?.filter(
+                              (q) => q.completed === 1
+                            ).length || 0}
                           </p>
                         </div>
 
@@ -913,7 +966,9 @@ const page = ({ goToReport }) => {
                             PENDING
                           </p>
                           <p className="text-orange-400 text-sm font-bold">
-                            {item.pending}
+                          {item.questionnaire_assigned?.filter(
+                              (q) => q.completed === 0
+                            ).length || 0}
                           </p>
                         </div>
                       </div>
