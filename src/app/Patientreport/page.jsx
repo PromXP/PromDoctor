@@ -49,50 +49,6 @@ import Surgeryreport from "@/app/Surgeryreport/page";
 
 import "@/app/globals.css";
 
-// Original raw data
-const boxPlotData = [
-  {
-    name: "PREOP",
-    boxData: [
-      22, 25, 27, 26, 24, 28, 29, 31, 30, 26, 27, 28, 29, 30, 31, 32, 33, 35,
-      36,
-    ],
-    dotValue: 29,
-  },
-  {
-    name: "6 WEEKS",
-    boxData: [
-      28, 30, 29, 31, 32, 33, 34, 35, 30, 29, 31, 32, 34, 36, 37, 33, 35, 38,
-      39,
-    ],
-    dotValue: 34,
-  },
-  {
-    name: "3 MONTHS",
-    boxData: [
-      34, 36, 38, 37, 35, 36, 37, 38, 39, 40, 36, 35, 34, 37, 38, 39, 40, 41,
-      42,
-    ],
-    dotValue: 39,
-  },
-  {
-    name: "6 MONTHS",
-    boxData: [
-      38, 39, 40, 42, 41, 40, 39, 38, 41, 42, 40, 39, 40, 41, 42, 43, 44, 45,
-      46,
-    ],
-    dotValue: 42,
-  },
-  {
-    name: "1 YEAR",
-    boxData: [
-      41, 42, 43, 44, 45, 44, 43, 42, 41, 42, 44, 45, 46, 47, 45, 46, 47, 48,
-      47,
-    ],
-    dotValue: 46,
-  },
-];
-
 // === Helper functions ===
 const quantile = (arr, q) => {
   const pos = (arr.length - 1) * q;
@@ -175,7 +131,6 @@ const useBoxPlot = (boxPlots) => {
 };
 
 const page = ({ patient, scoreGroups }) => {
-
   const useWindowSize = () => {
     const [size, setSize] = useState({
       width: 0,
@@ -284,7 +239,7 @@ const page = ({ patient, scoreGroups }) => {
       .map(({ _order, ...rest }) => rest);
   };
 
-  const data = generateChartData(patient);
+  const data = patient ? generateChartData(patient) : [];
 
   const COLORS = {
     oks: "#FF6384",
@@ -326,7 +281,7 @@ const page = ({ patient, scoreGroups }) => {
     });
 
   // Extract name for transformedData (could be expanded with additional properties if needed)
-  const transformedData = sf12Data.map(({ name }) => ({ name }));
+  const transformedData = (sf12Data ?? []).map(({ name }) => ({ name }));
 
   // Dynamic PCS Data - Filtering out null pScores and setting error to [10, 10]
   const dataPCS = sf12Data
@@ -398,11 +353,11 @@ const page = ({ patient, scoreGroups }) => {
   }, [scoreGroups, patient]);
 
   const databox = useBoxPlot(
-    boxPlotData.map((item, index) => {
+    (boxPlotData ?? []).map((item, index) => {
       const stats = computeBoxStats(item.boxData, item.dotValue);
       return {
         name: item.name,
-        x: index * 10, // controls spacing
+        x: index * 10,
         ...stats,
       };
     })
@@ -434,7 +389,7 @@ const page = ({ patient, scoreGroups }) => {
   }, [scoreGroups, patient]);
 
   const sf12Databox = useBoxPlot(
-    sf12BoxPlotData.map((item, index) => {
+    (sf12BoxPlotData ?? []).map((item, index) => {
       const stats = computeBoxStats(item.boxData, item.dotValue);
       return {
         name: item.name,
@@ -472,7 +427,7 @@ const page = ({ patient, scoreGroups }) => {
   }, [scoreGroups, patient]);
 
   const koosDatabox = useBoxPlot(
-    koosBoxPlotData.map((item, index) => {
+    (koosBoxPlotData ?? []).map((item, index) => {
       const stats = computeBoxStats(item.boxData, item.dotValue);
       return {
         name: item.name,
@@ -508,7 +463,7 @@ const page = ({ patient, scoreGroups }) => {
   }, [scoreGroups, patient]);
 
   const kssDatabox = useBoxPlot(
-    kssBoxPlotData.map((item, index) => {
+    (kssBoxPlotData ?? []).map((item, index) => {
       const stats = computeBoxStats(item.boxData, item.dotValue);
       return {
         name: item.name,
@@ -544,7 +499,7 @@ const page = ({ patient, scoreGroups }) => {
   }, [scoreGroups, patient]);
 
   const fjsDatabox = useBoxPlot(
-    fjsBoxPlotData.map((item, index) => {
+    (fjsBoxPlotData ?? []).map((item, index) => {
       const stats = computeBoxStats(item.boxData, item.dotValue);
       return {
         name: item.name,
@@ -1086,10 +1041,47 @@ const page = ({ patient, scoreGroups }) => {
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
 
-                {/* ✅ Tooltip */}
                 <Tooltip
-                  contentStyle={{ fontSize: 12, fontWeight: "500" }}
-                  labelStyle={{ color: "#333", fontWeight: 600 }}
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload || !Array.isArray(payload))
+                      return null;
+
+                    const safeLabel =
+                      typeof label === "number" || typeof label === "string"
+                        ? label
+                        : "Unknown";
+
+                    return (
+                      <div
+                        style={{
+                          background: "#fff",
+                          padding: "8px",
+                          border: "1px solid #ccc",
+                        }}
+                      >
+                        <p
+                          style={{ fontWeight: "bold", margin: 0 }}
+                        >{`Day: ${safeLabel}`}</p>
+                        {payload.map((entry, index) => {
+                          const value = entry?.value;
+                          return (
+                            <p
+                              key={index}
+                              style={{
+                                margin: 0,
+                                color: entry?.color ?? "#000",
+                              }}
+                            >
+                              {entry.name}:{" "}
+                              {typeof value === "number"
+                                ? value.toFixed(2)
+                                : "N/A"}
+                            </p>
+                          );
+                        })}
+                      </div>
+                    );
+                  }}
                   cursor={{ fill: "rgba(97, 94, 131, 0.1)" }}
                 />
 
@@ -1245,15 +1237,49 @@ const page = ({ patient, scoreGroups }) => {
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
 
-                {/* ✅ Tooltip */}
                 <Tooltip
-                  contentStyle={{ fontSize: 12, fontWeight: "500" }}
-                  labelStyle={{ color: "#333", fontWeight: 600 }}
-                  cursor={{ fill: "rgba(97, 94, 131, 0.1)" }}
-                  formatter={(value) => (isNaN(value) ? "-" : value.toString())}
-                  labelFormatter={(label) => (label ? label.toString() : "")}
-                />
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload || !Array.isArray(payload))
+                      return null;
 
+                    const safeLabel =
+                      typeof label === "number" || typeof label === "string"
+                        ? label
+                        : "Unknown";
+
+                    return (
+                      <div
+                        style={{
+                          background: "#fff",
+                          padding: "8px",
+                          border: "1px solid #ccc",
+                        }}
+                      >
+                        <p
+                          style={{ fontWeight: "bold", margin: 0 }}
+                        >{`Day: ${safeLabel}`}</p>
+                        {payload.map((entry, index) => {
+                          const value = entry?.value;
+                          return (
+                            <p
+                              key={index}
+                              style={{
+                                margin: 0,
+                                color: entry?.color ?? "#000",
+                              }}
+                            >
+                              {entry.name}:{" "}
+                              {typeof value === "number"
+                                ? value.toFixed(2)
+                                : "N/A"}
+                            </p>
+                          );
+                        })}
+                      </div>
+                    );
+                  }}
+                  cursor={{ fill: "rgba(97, 94, 131, 0.1)" }}
+                />
                 <Legend
                   verticalAlign="top"
                   align="right"
@@ -1417,10 +1443,47 @@ const page = ({ patient, scoreGroups }) => {
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
 
-                {/* ✅ Tooltip */}
                 <Tooltip
-                  contentStyle={{ fontSize: 12, fontWeight: "500" }}
-                  labelStyle={{ color: "#333", fontWeight: 600 }}
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload || !Array.isArray(payload))
+                      return null;
+
+                    const safeLabel =
+                      typeof label === "number" || typeof label === "string"
+                        ? label
+                        : "Unknown";
+
+                    return (
+                      <div
+                        style={{
+                          background: "#fff",
+                          padding: "8px",
+                          border: "1px solid #ccc",
+                        }}
+                      >
+                        <p
+                          style={{ fontWeight: "bold", margin: 0 }}
+                        >{`Day: ${safeLabel}`}</p>
+                        {payload.map((entry, index) => {
+                          const value = entry?.value;
+                          return (
+                            <p
+                              key={index}
+                              style={{
+                                margin: 0,
+                                color: entry?.color ?? "#000",
+                              }}
+                            >
+                              {entry.name}:{" "}
+                              {typeof value === "number"
+                                ? value.toFixed(2)
+                                : "N/A"}
+                            </p>
+                          );
+                        })}
+                      </div>
+                    );
+                  }}
                   cursor={{ fill: "rgba(97, 94, 131, 0.1)" }}
                 />
 
@@ -1578,10 +1641,47 @@ const page = ({ patient, scoreGroups }) => {
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
 
-                {/* ✅ Tooltip */}
                 <Tooltip
-                  contentStyle={{ fontSize: 12, fontWeight: "500" }}
-                  labelStyle={{ color: "#333", fontWeight: 600 }}
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload || !Array.isArray(payload))
+                      return null;
+
+                    const safeLabel =
+                      typeof label === "number" || typeof label === "string"
+                        ? label
+                        : "Unknown";
+
+                    return (
+                      <div
+                        style={{
+                          background: "#fff",
+                          padding: "8px",
+                          border: "1px solid #ccc",
+                        }}
+                      >
+                        <p
+                          style={{ fontWeight: "bold", margin: 0 }}
+                        >{`Day: ${safeLabel}`}</p>
+                        {payload.map((entry, index) => {
+                          const value = entry?.value;
+                          return (
+                            <p
+                              key={index}
+                              style={{
+                                margin: 0,
+                                color: entry?.color ?? "#000",
+                              }}
+                            >
+                              {entry.name}:{" "}
+                              {typeof value === "number"
+                                ? value.toFixed(2)
+                                : "N/A"}
+                            </p>
+                          );
+                        })}
+                      </div>
+                    );
+                  }}
                   cursor={{ fill: "rgba(97, 94, 131, 0.1)" }}
                 />
 
@@ -1748,10 +1848,47 @@ const page = ({ patient, scoreGroups }) => {
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
 
-                {/* ✅ Tooltip */}
                 <Tooltip
-                  contentStyle={{ fontSize: 12, fontWeight: "500" }}
-                  labelStyle={{ color: "#333", fontWeight: 600 }}
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload || !Array.isArray(payload))
+                      return null;
+
+                    const safeLabel =
+                      typeof label === "number" || typeof label === "string"
+                        ? label
+                        : "Unknown";
+
+                    return (
+                      <div
+                        style={{
+                          background: "#fff",
+                          padding: "8px",
+                          border: "1px solid #ccc",
+                        }}
+                      >
+                        <p
+                          style={{ fontWeight: "bold", margin: 0 }}
+                        >{`Day: ${safeLabel}`}</p>
+                        {payload.map((entry, index) => {
+                          const value = entry?.value;
+                          return (
+                            <p
+                              key={index}
+                              style={{
+                                margin: 0,
+                                color: entry?.color ?? "#000",
+                              }}
+                            >
+                              {entry.name}:{" "}
+                              {typeof value === "number"
+                                ? value.toFixed(2)
+                                : "N/A"}
+                            </p>
+                          );
+                        })}
+                      </div>
+                    );
+                  }}
                   cursor={{ fill: "rgba(97, 94, 131, 0.1)" }}
                 />
 
