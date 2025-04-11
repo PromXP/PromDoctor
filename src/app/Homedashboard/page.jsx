@@ -69,26 +69,25 @@ const page = ({ goToReport }) => {
   const [postOpTotal, setPostOpTotal] = useState(0);
   const [scoreGroups, setScoreGroups] = useState({});
 
-
   useEffect(() => {
     const fetchPatients = async () => {
       if (!userData?.user?.email) return;
-  
+
       try {
         const res = await axios.get(
           `https://promapi.onrender.com/patients/by-doctor/${userData.user.email}`
         );
         const data = res.data;
-  
+
         setPatients(data);
-  
+
         const preOp = data.filter((patient) =>
           patient.questionnaire_assigned?.some(
             (q) => q.period?.toLowerCase() === "pre op"
           )
         ).length;
         setPreOpCount(preOp);
-  
+
         const stageCounts = {
           "3W": 0,
           "6W": 0,
@@ -97,32 +96,29 @@ const page = ({ goToReport }) => {
           "1Y": 0,
           "2Y": 0,
         };
-  
+
         data.forEach((patient) => {
           const status = patient.current_status?.toUpperCase();
           if (stageCounts.hasOwnProperty(status)) {
             stageCounts[status]++;
           }
         });
-  
+
         setPostOpStages(stageCounts);
         setPostOpTotal(
           Object.values(stageCounts).reduce((sum, val) => sum + val, 0)
         );
-  
+
         // 🔽 Grouping Scores Logic
         const scoreGroups = {};
         data.forEach((patient) => {
           patient.questionnaire_scores?.forEach((q1) => {
             const key = `${q1.name}|${q1.period}`;
             if (!scoreGroups[key]) scoreGroups[key] = [];
-  
+
             data.forEach((otherPatient) => {
               otherPatient.questionnaire_scores?.forEach((q2) => {
-                if (
-                  q2.name.includes(q1.name) &&
-                  q2.period === q1.period
-                ) {
+                if (q2.name.includes(q1.name) && q2.period === q1.period) {
                   const scoreString = q2.score?.join(",") || "";
                   if (scoreString) scoreGroups[key].push(scoreString);
                 }
@@ -130,25 +126,23 @@ const page = ({ goToReport }) => {
             });
           });
         });
-  
+
         // Remove duplicates
         for (const key in scoreGroups) {
           scoreGroups[key] = Array.from(new Set(scoreGroups[key]));
         }
-  
+
         console.log("Grouped Scores (name|period):", scoreGroups);
-  
+
         // ✅ Store in state
         setScoreGroups(scoreGroups);
-  
       } catch (err) {
         console.error("Failed to fetch patients", err);
       }
     };
-  
+
     fetchPatients();
   }, [userData?.user?.email]);
-  
 
   const makeVip = (id) => {
     const updatedPatients = patients.map((patient) =>
@@ -213,7 +207,6 @@ const page = ({ goToReport }) => {
 
     return false;
   });
-
 
   const [patprogressfilter, setpatprogressFilter] = useState("ALL");
 
@@ -614,7 +607,7 @@ const page = ({ goToReport }) => {
                         score.name
                           ?.toLowerCase()
                           .includes(scorefilter.toLowerCase())
-                      )?.score ?? "N/A"}
+                      )?.score?.[0] ?? "N/A"}
                     </div>
                   </div>
 
@@ -632,7 +625,6 @@ const page = ({ goToReport }) => {
                           : ""
                       }`}
                       onClick={() => goToReport(patient, scoreGroups)}
-
                     >
                       <div className="text-sm font-medium border-b-2 text-[#476367] border-blue-gray-500 cursor-pointer">
                         Report
@@ -885,7 +877,7 @@ const page = ({ goToReport }) => {
 
                         {/* Patient Name */}
                         <p className="text-[#475467] text-base font-medium text-center mt-3">
-                        {item.first_name + " " + item.last_name}
+                          {item.first_name + " " + item.last_name}
                         </p>
 
                         {/* Status */}
@@ -899,7 +891,7 @@ const page = ({ goToReport }) => {
                             COMPLETED
                           </p>
                           <p className="text-green-500 text-sm font-bold">
-                          {item.questionnaire_assigned?.filter(
+                            {item.questionnaire_assigned?.filter(
                               (q) => q.completed === 1
                             ).length || 0}
                           </p>
@@ -911,7 +903,7 @@ const page = ({ goToReport }) => {
                             PENDING
                           </p>
                           <p className="text-orange-400 text-sm font-bold">
-                          {item.questionnaire_assigned?.filter(
+                            {item.questionnaire_assigned?.filter(
                               (q) => q.completed === 0
                             ).length || 0}
                           </p>
@@ -962,7 +954,7 @@ const page = ({ goToReport }) => {
 
                         {/* Patient Name */}
                         <p className="text-[#475467] text-base font-medium text-center mt-3">
-                        {item.first_name + " " + item.last_name}
+                          {item.first_name + " " + item.last_name}
                         </p>
 
                         {/* Status */}
@@ -976,7 +968,7 @@ const page = ({ goToReport }) => {
                             COMPLETED
                           </p>
                           <p className="text-green-500 text-sm font-bold">
-                          {item.questionnaire_assigned?.filter(
+                            {item.questionnaire_assigned?.filter(
                               (q) => q.completed === 1
                             ).length || 0}
                           </p>
@@ -988,7 +980,7 @@ const page = ({ goToReport }) => {
                             PENDING
                           </p>
                           <p className="text-orange-400 text-sm font-bold">
-                          {item.questionnaire_assigned?.filter(
+                            {item.questionnaire_assigned?.filter(
                               (q) => q.completed === 0
                             ).length || 0}
                           </p>
