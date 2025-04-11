@@ -347,14 +347,14 @@ const page = ({patient }) => {
                         }
                           w-1/2`}
                       >
-                        {patient.age}, {patient.gender}
+                        {patient?.age}, {patient?.gender}
                       </p>
                       <div
                         className={`text-sm font-normal font-poppins text-[#475467] w-1/2 ${
                           width < 530 ? "text-center" : ""
                         }`}
                       >
-                        UHID {patient.uhid}
+                        UHID {patient?.uhid}
                       </div>
                     </div>
                   </div>
@@ -377,7 +377,7 @@ const page = ({patient }) => {
                       }`}
                     >
                       <p className="text-[#475467] font-semibold text-5">BMI</p>
-                      <p className="text-[#04CE00] font-bold text-6">{patient.bmi}</p>
+                      <p className="text-[#04CE00] font-bold text-6">{patient?.bmi}</p>
                     </div>
                     <div
                       className={` flex flex-col gap-3 ${
@@ -390,7 +390,7 @@ const page = ({patient }) => {
                         STATUS
                       </p>
                       <p className="text-[#F86060] font-bold text-6">
-                        {patient.current_status}
+                        {patient?.current_status}
                       </p>
                     </div>
                     <div
