@@ -212,7 +212,7 @@ const page = ({ patient }) => {
   };
 
   const generateChartData = (patient) => {
-    const scores = patient.questionnaire_scores || [];
+    const scores = patient?.questionnaire_scores || [];
 
     const periodMap = {
       "-3": "PRE OP",
