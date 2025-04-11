@@ -175,9 +175,7 @@ const useBoxPlot = (boxPlots) => {
 };
 
 const page = ({ patient, scoreGroups }) => {
-  useEffect(() => {
-    console.log("Received scores for this report:", scoreGroups);
-  }, [scoreGroups]);
+
   const useWindowSize = () => {
     const [size, setSize] = useState({
       width: 0,
