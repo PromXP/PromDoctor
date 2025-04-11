@@ -241,22 +241,6 @@ const page = ({ patient, scoreGroups }) => {
 
   const data = patient ? generateChartData(patient) : [];
 
-  const COLORS = {
-    oks: "#FF6384",
-    sf12: "#36A2EB",
-    koos: "#FFCE56",
-    kss: "#4BC0C0",
-    fjs: "#9966FF",
-  };
-
-  const labelMap = {
-    "Oxford Knee Score (OKS)": "oks",
-    "Forgotten Join Score (FJS)": "fjs",
-    "Knee Injury and Ostheoarthritis Outcome Score (KOOS)": "koos",
-    "Knee Society Score (KSS)": "kss",
-    "Short Form - 12 (SF-12)": "sf12",
-  };
-
   const rawScores = patient?.questionnaire_scores ?? [];
 
   // Define the custom order for the periods
@@ -327,6 +311,7 @@ const page = ({ patient, scoreGroups }) => {
       .filter((v) => !isNaN(v));
 
   const boxPlotData = useMemo(() => {
+    if (!scoreGroups) return [];
     return Object.entries(scoreGroups)
       .filter(([key]) => key.startsWith("Oxford Knee Score (OKS)"))
       .map(([key, values]) => {
@@ -365,6 +350,7 @@ const page = ({ patient, scoreGroups }) => {
 
   // SF-12 data processing
   const sf12BoxPlotData = useMemo(() => {
+    if (!scoreGroups) return [];
     return Object.entries(scoreGroups)
       .filter(([key]) => key.startsWith("Short Form - 12 (SF-12)"))
       .map(([key, values]) => {
@@ -401,6 +387,7 @@ const page = ({ patient, scoreGroups }) => {
 
   // KOOS data
   const koosBoxPlotData = useMemo(() => {
+    if (!scoreGroups) return [];
     return Object.entries(scoreGroups)
       .filter(([key]) =>
         key.startsWith("Knee injury and Osteoarthritis Outcome Score (KOOS)")
@@ -439,6 +426,7 @@ const page = ({ patient, scoreGroups }) => {
 
   // KSS data
   const kssBoxPlotData = useMemo(() => {
+    if (!scoreGroups) return [];
     return Object.entries(scoreGroups)
       .filter(([key]) => key.startsWith("Knee Society Score (KSS)"))
       .map(([key, values]) => {
@@ -475,6 +463,7 @@ const page = ({ patient, scoreGroups }) => {
 
   // FJS data
   const fjsBoxPlotData = useMemo(() => {
+    if (!scoreGroups) return [];
     return Object.entries(scoreGroups)
       .filter(([key]) => key.startsWith("Forgotten Joint Score (FJS)"))
       .map(([key, values]) => {
