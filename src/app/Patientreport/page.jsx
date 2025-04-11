@@ -103,7 +103,7 @@ const quantile = (arr, q) => {
 
 const mean = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
 
-const computeBoxStats = (data,mean) => {
+const computeBoxStats = (data, mean) => {
   const sorted = [...data].sort((a, b) => a - b);
   return {
     min: sorted[0],
@@ -121,7 +121,7 @@ const HorizonBar = (props) => {
 
   if (cx == null || cy == null || !payload) return null;
   const isMedian = dataKey === "_median";
-    const length = isMedian ? 30 : 10;
+  const length = isMedian ? 30 : 10;
 
   return (
     <line
@@ -174,7 +174,7 @@ const useBoxPlot = (boxPlots) => {
   );
 };
 
-const page = ({patient }) => {
+const page = ({ patient }) => {
   const useWindowSize = () => {
     const [size, setSize] = useState({
       width: 0,
@@ -199,16 +199,91 @@ const page = ({patient }) => {
 
   const { width, height } = useWindowSize();
 
-  const data = [
-    { name: "-3", oks: 32, sf12: 70, koos: 68, kss: 72, fjs: 65 },
-    { name: "SURGERY", oks: 28, sf12: 65, koos: 60, kss: 67, fjs: 58 },
-    { name: "+21", oks: 34, sf12: 75, koos: 73, kss: 76, fjs: 70 },
-    { name: "+42", oks: 38, sf12: 78, koos: 75, kss: 79, fjs: 73 },
-    { name: "+90", oks: 42, sf12: 82, koos: 80, kss: 85, fjs: 80 },
-    { name: "+180", oks: 44, sf12: 85, koos: 83, kss: 88, fjs: 84 },
-    { name: "+365", oks: 46, sf12: 88, koos: 86, kss: 90, fjs: 88 },
-    { name: "+730", oks: 48, sf12: 92, koos: 90, kss: 94, fjs: 91 },
-  ];
+  const normalizePeriod = (period) =>
+    period.trim().toUpperCase().replace(/\s+/g, "");
+
+  const getScoreByPeriodAndType = (scores, period, type) => {
+    const match = scores.find(
+      (s) =>
+        normalizePeriod(s.period) === normalizePeriod(period) &&
+        s.name.toLowerCase().includes(type.toLowerCase())
+    );
+    return match ? match.score[0] : null;
+  };
+
+  const generateChartData = (patient) => {
+    const scores = patient.questionnaire_scores || [];
+
+    const periodMap = {
+      "-3": "PRE OP",
+      "3W": "3W", // 👈 Add this
+      SURGERY: "SURGERY",
+      "+42": "6W",
+      "+90": "3M",
+      "+180": "6M",
+      "+365": "1Y",
+      "+730": "2Y",
+    };
+
+    const timeOrder = {
+      "-3": -3,
+      "3W": 21, // 👈 Approximate 3 weeks in days
+      SURGERY: 10,
+      "+42": 42,
+      "+90": 90,
+      "+180": 180,
+      "+365": 365,
+      "+730": 730,
+    };
+
+    // Check if a period exists in the questionnaire_scores
+    const hasPeriodData = (periodKey) => {
+      return scores.some(
+        (s) =>
+          normalizePeriod(s.period) === normalizePeriod(periodMap[periodKey])
+      );
+    };
+
+    // Always include surgery, include others only if data exists
+    const periods = Object.keys(periodMap).filter(
+      (key) => key === "SURGERY" || hasPeriodData(key)
+    );
+
+    const chartData = periods.map((label) => {
+      const periodKey = periodMap[label];
+
+      return {
+        name: periodKey,
+        oks:
+          label === "SURGERY"
+            ? undefined
+            : getScoreByPeriodAndType(scores, periodKey, "Oxford Knee Score"),
+        sf12:
+          label === "SURGERY"
+            ? undefined
+            : getScoreByPeriodAndType(scores, periodKey, "SF-12") || 0,
+        koos:
+          label === "SURGERY"
+            ? undefined
+            : getScoreByPeriodAndType(scores, periodKey, "KOOS"),
+        kss:
+          label === "SURGERY"
+            ? undefined
+            : getScoreByPeriodAndType(scores, periodKey, "KSS"),
+        fjs:
+          label === "SURGERY"
+            ? undefined
+            : getScoreByPeriodAndType(scores, periodKey, "FJS") || 0,
+        _order: timeOrder[label],
+      };
+    });
+
+    return chartData
+      .sort((a, b) => a._order - b._order)
+      .map(({ _order, ...rest }) => rest);
+  };
+
+  const data = generateChartData(patient);
 
   const COLORS = {
     oks: "#FF6384",
@@ -218,51 +293,71 @@ const page = ({patient }) => {
     fjs: "#9966FF",
   };
 
-  //   const data1 = [
-  //     { name: "A", x: "A", y: 80 },
-  //     { name: "B", x: "B", y: 100 },
-  //     { name: "C", x: "C", y: 60 },
-  //   ];
+  const labelMap = {
+    "Oxford Knee Score (OKS)": "oks",
+    "Forgotten Join Score (FJS)": "fjs",
+    "Knee Injury and Ostheoarthritis Outcome Score (KOOS)": "koos",
+    "Knee Society Score (KSS)": "kss",
+    "Short Form - 12 (SF-12)": "sf12",
+  };
 
-  //   // Add ±10 error to each point
-  //   const processedData = data1.map((d) => ({
-  //     ...d,
-  //     error: [10, 10],
-  //   }));
+  const rawScores = patient?.questionnaire_scores ?? [];
 
-  const transformedData = [
-    { name: "-3", pcs: 28.67, mcs: 33.75 },
-    { name: "SURGERY", pcs: 25.83, mcs: 30.75 },
-    { name: "+21", pcs: 30.5, mcs: 36.25 },
-    { name: "+42", pcs: 32.67, mcs: 37.75 },
-    { name: "+90", pcs: 34.25, mcs: 41 },
-    { name: "+180", pcs: 36.25, mcs: 42.25 },
-    { name: "+365", pcs: 37.33, mcs: 44 },
-    { name: "+730", pcs: 38.67, mcs: 45.75 },
+  // Define the custom order for the periods
+  const periodOrder = [
+    "PRE OP", 
+    "SURGERY", 
+    "3W", 
+    "6W", 
+    "3M", 
+    "6M", 
+    "1Y", 
+    "2Y"
   ];
-
-  const dataPCS = transformedData
-    .map((item, index) => ({
-      x: index - 0.1,
-      label: item.name,
-      y: Math.round(Math.abs(item.pcs)),
-      error: [10, 10],
+  
+  // Filter, map and sort the data
+  const sf12Data = rawScores
+    .filter(q => q.name.includes('Short Form') && q.name.includes('12'))  // Filter only SF-12 questionnaire scores
+    .map((q, index) => ({
+      name: q.period || `Day ${index + 1}`,  // Dynamically set the period or default to Day {index + 1}
+      x: index,                             // Index for x-axis
+      pScore: q.score?.[0] ?? null,         // Physical score (PCS)
+      mScore: q.score?.[1] ?? null,         // Mental score (MCS)
     }))
-    .filter((item) => item.label !== "SURGERY");
-
-  const dataMCS = transformedData
-    .map((item, index) => ({
-      x: index + 0.1,
-      label: item.name,
-      y: Math.round(Math.abs(item.mcs)),
-      error: [10, 10],
-    }))
-    .filter((item) => item.label !== "SURGERY");
-
-  const surgeryIndex = transformedData.findIndex(
-    (item) => item.name === "SURGERY"
+    .sort((a, b) => {
+      // Get the index of the period in the custom period order
+      const aIndex = periodOrder.indexOf(a.name);
+      const bIndex = periodOrder.indexOf(b.name);
+  
+      // If a.name is not in periodOrder, treat it as the last one
+      return aIndex === -1 ? 1 : (bIndex === -1 ? -1 : aIndex - bIndex);
+    });
+  
+  // Extract name for transformedData (could be expanded with additional properties if needed)
+  const transformedData = sf12Data.map(({ name }) => ({ name }));
+  
+  // Dynamic PCS Data - Filtering out null pScores and setting error to [10, 10]
+  const dataPCS = sf12Data
+    .filter(d => d.pScore !== null)          // Filter out null pScores
+    .map((d, index) => ({
+      x: index - 0.1,                        // Set x value for PCS (index - 0.1)
+      y: d.pScore,                           // y value for PCS score
+      error: [10, 10],                       // Fixed error bars [10, 10]
+    }));
+  
+  // Dynamic MCS Data - Filtering out null mScores and setting error to [10, 10]
+  const dataMCS = sf12Data
+    .filter(d => d.mScore !== null)          // Filter out null mScores
+    .map((d, index) => ({
+      x: index + 0.1,                        // Set x value for MCS (index + 0.1)
+      y: d.mScore,                           // y value for MCS score
+      error: [10, 10],                       // Fixed error bars [10, 10]
+    }));
+  
+  // Finding the surgery index, if available
+  const surgeryIndex = sf12Data.findIndex(d =>
+    d.name.toLowerCase().includes('Surgery')  // Dynamically find the surgery index
   );
-
 
   const databox = useBoxPlot(
     boxPlotData.map((item, index) => {
@@ -377,7 +472,9 @@ const page = ({patient }) => {
                       }`}
                     >
                       <p className="text-[#475467] font-semibold text-5">BMI</p>
-                      <p className="text-[#04CE00] font-bold text-6">{patient?.bmi}</p>
+                      <p className="text-[#04CE00] font-bold text-6">
+                        {patient?.bmi}
+                      </p>
                     </div>
                     <div
                       className={` flex flex-col gap-3 ${
@@ -407,7 +504,10 @@ const page = ({patient }) => {
                         <p className="text-[#F86060] font-bold text-6">
                           PENDING
                         </p>
-                        <PencilSquareIcon className="w-5 h-5 text-black cursor-pointer" onClick={() => setIsOpen(true)}/>
+                        <PencilSquareIcon
+                          className="w-5 h-5 text-black cursor-pointer"
+                          onClick={() => setIsOpen(true)}
+                        />
                       </div>
                     </div>
                   </div>
@@ -424,9 +524,17 @@ const page = ({patient }) => {
             : "w-[95%] flex-col"
         }`}
       >
-        <div className={`w-full flex   gap-4 ${width<1415?"flex-col justify-center items-center h-[1000px]":"flex-row h-[400px]"}`}>
+        <div
+          className={`w-full flex   gap-4 ${
+            width < 1415
+              ? "flex-col justify-center items-center h-[1000px]"
+              : "flex-row h-[400px]"
+          }`}
+        >
           <div
-            className={` flex flex-col bg-white px-4 py-2 rounded-2xl shadow-lg ${width<1415?"w-full h-1/2":"w-1/2"}`}
+            className={` flex flex-col bg-white px-4 py-2 rounded-2xl shadow-lg ${
+              width < 1415 ? "w-full h-1/2" : "w-1/2"
+            }`}
           >
             <p className="font-bold text-sm text-black">PROM ANALYSIS</p>
             <ResponsiveContainer width="100%" height="90%">
@@ -583,6 +691,7 @@ const page = ({patient }) => {
                       key={key}
                       type="monotone"
                       dataKey={key}
+                      connectNulls={true}
                       name={labels[key]}
                       stroke={colors[i]}
                       strokeWidth={2}
@@ -615,7 +724,9 @@ const page = ({patient }) => {
             </ResponsiveContainer>
           </div>
           <div
-            className={`flex flex-col bg-white px-4 py-2 rounded-2xl shadow-lg ${width<1415?"w-full h-1/2":"w-1/2"}`}
+            className={`flex flex-col bg-white px-4 py-2 rounded-2xl shadow-lg ${
+              width < 1415 ? "w-full h-1/2" : "w-1/2"
+            }`}
           >
             <p className="font-bold text-sm text-black">
               SHORT FORM 12 (PCS vs MCS)
@@ -733,12 +844,20 @@ const page = ({patient }) => {
                     );
                   }}
                 />
+  
+  <ReferenceLine
+  x={surgeryIndex}
+  stroke="limegreen"
+  strokeWidth={2}
+  label={{
+    value: 'Surgery',
+    position: 'top',
+    fill: 'limegreen',
+    fontWeight: 'bold',
+    fontSize: 12,
+  }}
+/>
 
-                <ReferenceLine
-                  x={surgeryIndex}
-                  stroke="limegreen"
-                  strokeWidth={2}
-                />
 
                 <Scatter name="Physical (PCS)" data={dataPCS} fill="red">
                   <ErrorBar
@@ -762,9 +881,17 @@ const page = ({patient }) => {
           </div>
         </div>
 
-        <div className={`w-full flex   gap-4 ${width<1415?"flex-col justify-center items-center h-[1000px]":"flex-row h-[400px]"}`}>
+        <div
+          className={`w-full flex   gap-4 ${
+            width < 1415
+              ? "flex-col justify-center items-center h-[1000px]"
+              : "flex-row h-[400px]"
+          }`}
+        >
           <div
-            className={`flex flex-col bg-white px-4 py-2 rounded-2xl shadow-lg ${width<1415?"w-full h-1/2":"w-1/2"}`}
+            className={`flex flex-col bg-white px-4 py-2 rounded-2xl shadow-lg ${
+              width < 1415 ? "w-full h-1/2" : "w-1/2"
+            }`}
           >
             <p className="font-bold text-sm text-black">OXFORD KNEE SCORE </p>
             <ResponsiveContainer width="100%" height="90%">
@@ -854,13 +981,14 @@ const page = ({patient }) => {
                   data={databox}
                   shape={(props) => <HorizonBar {...props} dataKey="_median" />}
                   dataKey="_median"
-                  
                 />
 
                 {/* Min Line */}
                 <Scatter
                   data={databox}
-                  shape={(props) => <HorizonBar {...props} dataKey="_min" stroke="#4A3AFF"/>}
+                  shape={(props) => (
+                    <HorizonBar {...props} dataKey="_min" stroke="#4A3AFF" />
+                  )}
                   dataKey="_min"
                 />
 
@@ -919,8 +1047,12 @@ const page = ({patient }) => {
               </ComposedChart>
             </ResponsiveContainer>
           </div>
-          <div className={`flex flex-col bg-white px-4 py-2 rounded-2xl shadow-lg ${width<1415?"w-full h-1/2":"w-1/2"}`}>
-          <p className="font-bold text-sm text-black">SHORT FORM 12</p>
+          <div
+            className={`flex flex-col bg-white px-4 py-2 rounded-2xl shadow-lg ${
+              width < 1415 ? "w-full h-1/2" : "w-1/2"
+            }`}
+          >
+            <p className="font-bold text-sm text-black">SHORT FORM 12</p>
             <ResponsiveContainer width="100%" height="90%">
               <ComposedChart
                 data={databox}
@@ -1008,13 +1140,14 @@ const page = ({patient }) => {
                   data={databox}
                   shape={(props) => <HorizonBar {...props} dataKey="_median" />}
                   dataKey="_median"
-                  
                 />
 
                 {/* Min Line */}
                 <Scatter
                   data={databox}
-                  shape={(props) => <HorizonBar {...props} dataKey="_min" stroke="#4A3AFF"/>}
+                  shape={(props) => (
+                    <HorizonBar {...props} dataKey="_min" stroke="#4A3AFF" />
+                  )}
                   dataKey="_min"
                 />
 
@@ -1071,14 +1204,25 @@ const page = ({patient }) => {
                   tickLine={{ stroke: "#615E83" }}
                 />
               </ComposedChart>
-            </ResponsiveContainer></div>
+            </ResponsiveContainer>
+          </div>
         </div>
 
-        <div className={`w-full flex   gap-4 ${width<1415?"flex-col justify-center items-center h-[1000px]":"flex-row h-[400px]"}`}>
+        <div
+          className={`w-full flex   gap-4 ${
+            width < 1415
+              ? "flex-col justify-center items-center h-[1000px]"
+              : "flex-row h-[400px]"
+          }`}
+        >
           <div
-            className={`flex flex-col bg-white px-4 py-2 rounded-2xl shadow-lg ${width<1415?"w-full h-1/2":"w-1/2"}`}
+            className={`flex flex-col bg-white px-4 py-2 rounded-2xl shadow-lg ${
+              width < 1415 ? "w-full h-1/2" : "w-1/2"
+            }`}
           >
-            <p className="font-bold text-sm text-black">KNEE INJURY AND OSTEOARTHRITIS OUTCOME SCORE (KOOS)</p>
+            <p className="font-bold text-sm text-black">
+              KNEE INJURY AND OSTEOARTHRITIS OUTCOME SCORE (KOOS)
+            </p>
             <ResponsiveContainer width="100%" height="90%">
               <ComposedChart
                 data={databox}
@@ -1166,13 +1310,14 @@ const page = ({patient }) => {
                   data={databox}
                   shape={(props) => <HorizonBar {...props} dataKey="_median" />}
                   dataKey="_median"
-                  
                 />
 
                 {/* Min Line */}
                 <Scatter
                   data={databox}
-                  shape={(props) => <HorizonBar {...props} dataKey="_min" stroke="#4A3AFF"/>}
+                  shape={(props) => (
+                    <HorizonBar {...props} dataKey="_min" stroke="#4A3AFF" />
+                  )}
                   dataKey="_min"
                 />
 
@@ -1231,8 +1376,14 @@ const page = ({patient }) => {
               </ComposedChart>
             </ResponsiveContainer>
           </div>
-          <div className={`flex flex-col bg-white px-4 py-2 rounded-2xl shadow-lg ${width<1415?"w-full h-1/2":"w-1/2"}`}>
-          <p className="font-bold text-sm text-black">KNEE SOCIETY SCORE (KSS)</p>
+          <div
+            className={`flex flex-col bg-white px-4 py-2 rounded-2xl shadow-lg ${
+              width < 1415 ? "w-full h-1/2" : "w-1/2"
+            }`}
+          >
+            <p className="font-bold text-sm text-black">
+              KNEE SOCIETY SCORE (KSS)
+            </p>
             <ResponsiveContainer width="100%" height="90%">
               <ComposedChart
                 data={databox}
@@ -1320,13 +1471,14 @@ const page = ({patient }) => {
                   data={databox}
                   shape={(props) => <HorizonBar {...props} dataKey="_median" />}
                   dataKey="_median"
-                  
                 />
 
                 {/* Min Line */}
                 <Scatter
                   data={databox}
-                  shape={(props) => <HorizonBar {...props} dataKey="_min" stroke="#4A3AFF"/>}
+                  shape={(props) => (
+                    <HorizonBar {...props} dataKey="_min" stroke="#4A3AFF" />
+                  )}
                   dataKey="_min"
                 />
 
@@ -1383,14 +1535,25 @@ const page = ({patient }) => {
                   tickLine={{ stroke: "#615E83" }}
                 />
               </ComposedChart>
-            </ResponsiveContainer></div>
+            </ResponsiveContainer>
+          </div>
         </div>
 
-        <div className={`w-full flex   gap-4 ${width<1415?"flex-col justify-center items-center h-[500px]":"flex-row h-[400px]"}`}>
+        <div
+          className={`w-full flex   gap-4 ${
+            width < 1415
+              ? "flex-col justify-center items-center h-[500px]"
+              : "flex-row h-[400px]"
+          }`}
+        >
           <div
-            className={`flex flex-col bg-white px-4 py-2 rounded-2xl shadow-lg ${width<1415?"w-full h-full":"w-1/2"}`}
+            className={`flex flex-col bg-white px-4 py-2 rounded-2xl shadow-lg ${
+              width < 1415 ? "w-full h-full" : "w-1/2"
+            }`}
           >
-            <p className="font-bold text-sm text-black">FORGOTTEN JOINT SCORE (FJS) </p>
+            <p className="font-bold text-sm text-black">
+              FORGOTTEN JOINT SCORE (FJS){" "}
+            </p>
             <ResponsiveContainer width="100%" height="90%">
               <ComposedChart
                 data={databox}
@@ -1478,13 +1641,14 @@ const page = ({patient }) => {
                   data={databox}
                   shape={(props) => <HorizonBar {...props} dataKey="_median" />}
                   dataKey="_median"
-                  
                 />
 
                 {/* Min Line */}
                 <Scatter
                   data={databox}
-                  shape={(props) => <HorizonBar {...props} dataKey="_min" stroke="#4A3AFF"/>}
+                  shape={(props) => (
+                    <HorizonBar {...props} dataKey="_min" stroke="#4A3AFF" />
+                  )}
                   dataKey="_min"
                 />
 
@@ -1543,11 +1707,14 @@ const page = ({patient }) => {
               </ComposedChart>
             </ResponsiveContainer>
           </div>
-    
         </div>
       </div>
 
-      <Surgeryreport isOpen={isOpen} onClose={() => setIsOpen(false)} patient={patient} />
+      <Surgeryreport
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        patient={patient}
+      />
     </>
   );
 };
