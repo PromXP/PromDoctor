@@ -331,7 +331,7 @@ const page = ({patient }) => {
                           width < 530 ? "text-start" : ""
                         }`}
                       >
-                        {patient.first_name+" "+patient.last_name}
+                        {patient?.first_name + " " + patient?.last_name}
                       </p>
                     </div>
                     <div
