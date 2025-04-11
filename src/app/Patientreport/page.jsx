@@ -174,7 +174,10 @@ const useBoxPlot = (boxPlots) => {
   );
 };
 
-const page = ({ patient }) => {
+const page = ({ patient, scoreGroups }) => {
+  useEffect(() => {
+    console.log("Received scores for this report:", scoreGroups);
+  }, [scoreGroups]);
   const useWindowSize = () => {
     const [size, setSize] = useState({
       width: 0,
@@ -304,67 +307,250 @@ const page = ({ patient }) => {
   const rawScores = patient?.questionnaire_scores ?? [];
 
   // Define the custom order for the periods
-  const periodOrder = [
-    "PRE OP", 
-    "SURGERY", 
-    "3W", 
-    "6W", 
-    "3M", 
-    "6M", 
-    "1Y", 
-    "2Y"
-  ];
-  
+  const periodOrder = ["PRE OP", "SURGERY", "3W", "6W", "3M", "6M", "1Y", "2Y"];
+
   // Filter, map and sort the data
   const sf12Data = rawScores
-    .filter(q => q.name.includes('Short Form') && q.name.includes('12'))  // Filter only SF-12 questionnaire scores
+    .filter((q) => q.name.includes("Short Form") && q.name.includes("12")) // Filter only SF-12 questionnaire scores
     .map((q, index) => ({
-      name: q.period || `Day ${index + 1}`,  // Dynamically set the period or default to Day {index + 1}
-      x: index,                             // Index for x-axis
-      pScore: q.score?.[0] ?? null,         // Physical score (PCS)
-      mScore: q.score?.[1] ?? null,         // Mental score (MCS)
+      name: q.period || `Day ${index + 1}`, // Dynamically set the period or default to Day {index + 1}
+      x: index, // Index for x-axis
+      pScore: q.score?.[1] ?? null, // Physical score (PCS)
+      mScore: q.score?.[2] ?? null, // Mental score (MCS)
     }))
     .sort((a, b) => {
       // Get the index of the period in the custom period order
       const aIndex = periodOrder.indexOf(a.name);
       const bIndex = periodOrder.indexOf(b.name);
-  
+
       // If a.name is not in periodOrder, treat it as the last one
-      return aIndex === -1 ? 1 : (bIndex === -1 ? -1 : aIndex - bIndex);
+      return aIndex === -1 ? 1 : bIndex === -1 ? -1 : aIndex - bIndex;
     });
-  
+
   // Extract name for transformedData (could be expanded with additional properties if needed)
   const transformedData = sf12Data.map(({ name }) => ({ name }));
-  
+
   // Dynamic PCS Data - Filtering out null pScores and setting error to [10, 10]
   const dataPCS = sf12Data
-    .filter(d => d.pScore !== null)          // Filter out null pScores
+    .filter((d) => d.pScore !== null) // Filter out null pScores
     .map((d, index) => ({
-      x: index - 0.1,                        // Set x value for PCS (index - 0.1)
-      y: d.pScore,                           // y value for PCS score
-      error: [10, 10],                       // Fixed error bars [10, 10]
+      x: index - 0.1, // Set x value for PCS (index - 0.1)
+      y: d.pScore, // y value for PCS score
+      error: [10, 10], // Fixed error bars [10, 10]
     }));
-  
+
   // Dynamic MCS Data - Filtering out null mScores and setting error to [10, 10]
   const dataMCS = sf12Data
-    .filter(d => d.mScore !== null)          // Filter out null mScores
+    .filter((d) => d.mScore !== null) // Filter out null mScores
     .map((d, index) => ({
-      x: index + 0.1,                        // Set x value for MCS (index + 0.1)
-      y: d.mScore,                           // y value for MCS score
-      error: [10, 10],                       // Fixed error bars [10, 10]
+      x: index + 0.1, // Set x value for MCS (index + 0.1)
+      y: d.mScore, // y value for MCS score
+      error: [10, 10], // Fixed error bars [10, 10]
     }));
-  
+
   // Finding the surgery index, if available
-  const surgeryIndex = sf12Data.findIndex(d =>
-    d.name.toLowerCase().includes('Surgery')  // Dynamically find the surgery index
+  const surgeryIndex = sf12Data.findIndex(
+    (d) => d.name.toLowerCase().includes("Surgery") // Dynamically find the surgery index
   );
+
+  const normalizeLabel = (label) => {
+    const map = {
+      "PRE OP": "PREOP",
+      "3W": "3 WEEKS",
+      "6W": "6 WEEKS",
+      "3M": "3 MONTHS",
+      "6M": "6 MONTHS",
+      "1Y": "1 YEAR",
+      "2Y": "2 YEAR",
+    };
+    return map[label.trim().toUpperCase()] || label.trim().toUpperCase();
+  };
+
+  const parseValues = (arr) =>
+    arr
+      .map((val) => val.split(","))
+      .flat()
+      .map((v) => parseFloat(v))
+      .filter((v) => !isNaN(v));
+
+  const boxPlotData = useMemo(() => {
+    return Object.entries(scoreGroups)
+      .filter(([key]) => key.startsWith("Oxford Knee Score (OKS)"))
+      .map(([key, values]) => {
+        const label = key.split("|")[1];
+        const name = normalizeLabel(label);
+        const boxData = parseValues(values);
+
+        // Find exact OKS match for this timepoint
+        const patientValue = patient?.questionnaire_scores?.find(
+          (s) =>
+            s.name === "Oxford Knee Score (OKS)" &&
+            normalizeLabel(s.period) === name
+        );
+
+        // dotValue is directly the score[0] if available
+        const dotValue = patientValue?.score?.[0] ?? null;
+
+        return {
+          name,
+          boxData,
+          dotValue,
+        };
+      });
+  }, [scoreGroups, patient]);
 
   const databox = useBoxPlot(
     boxPlotData.map((item, index) => {
       const stats = computeBoxStats(item.boxData, item.dotValue);
       return {
         name: item.name,
-        x: index * 10, // ← spacing between box plots here
+        x: index * 10, // controls spacing
+        ...stats,
+      };
+    })
+  );
+
+  // SF-12 data processing
+  const sf12BoxPlotData = useMemo(() => {
+    return Object.entries(scoreGroups)
+      .filter(([key]) => key.startsWith("Short Form - 12 (SF-12)"))
+      .map(([key, values]) => {
+        const label = key.split("|")[1];
+        const name = normalizeLabel(label);
+        const boxData = parseValues(values);
+
+        const patientValue = patient?.questionnaire_scores?.find(
+          (s) =>
+            s.name === "Short Form - 12 (SF-12)" &&
+            normalizeLabel(s.period) === name
+        );
+
+        const dotValue = patientValue?.score?.[0] ?? null;
+
+        return {
+          name,
+          boxData,
+          dotValue,
+        };
+      });
+  }, [scoreGroups, patient]);
+
+  const sf12Databox = useBoxPlot(
+    sf12BoxPlotData.map((item, index) => {
+      const stats = computeBoxStats(item.boxData, item.dotValue);
+      return {
+        name: item.name,
+        x: index * 10,
+        ...stats,
+      };
+    })
+  );
+
+  // KOOS data
+  const koosBoxPlotData = useMemo(() => {
+    return Object.entries(scoreGroups)
+      .filter(([key]) =>
+        key.startsWith("Knee injury and Osteoarthritis Outcome Score (KOOS)")
+      )
+      .map(([key, values]) => {
+        const label = key.split("|")[1];
+        const name = normalizeLabel(label);
+        const boxData = parseValues(values);
+
+        const patientValue = patient?.questionnaire_scores?.find(
+          (s) =>
+            s.name === "Knee injury and Osteoarthritis Outcome Score (KOOS)" &&
+            normalizeLabel(s.period) === name
+        );
+
+        const dotValue = patientValue?.score?.[0] ?? null;
+
+        return {
+          name,
+          boxData,
+          dotValue,
+        };
+      });
+  }, [scoreGroups, patient]);
+
+  const koosDatabox = useBoxPlot(
+    koosBoxPlotData.map((item, index) => {
+      const stats = computeBoxStats(item.boxData, item.dotValue);
+      return {
+        name: item.name,
+        x: index * 10,
+        ...stats,
+      };
+    })
+  );
+
+  // KSS data
+  const kssBoxPlotData = useMemo(() => {
+    return Object.entries(scoreGroups)
+      .filter(([key]) => key.startsWith("Knee Society Score (KSS)"))
+      .map(([key, values]) => {
+        const label = key.split("|")[1];
+        const name = normalizeLabel(label);
+        const boxData = parseValues(values);
+
+        const patientValue = patient?.questionnaire_scores?.find(
+          (s) =>
+            s.name === "Knee Society Score (KSS)" &&
+            normalizeLabel(s.period) === name
+        );
+
+        const dotValue = patientValue?.score?.[0] ?? null;
+
+        return {
+          name,
+          boxData,
+          dotValue,
+        };
+      });
+  }, [scoreGroups, patient]);
+
+  const kssDatabox = useBoxPlot(
+    kssBoxPlotData.map((item, index) => {
+      const stats = computeBoxStats(item.boxData, item.dotValue);
+      return {
+        name: item.name,
+        x: index * 10,
+        ...stats,
+      };
+    })
+  );
+
+  // FJS data
+  const fjsBoxPlotData = useMemo(() => {
+    return Object.entries(scoreGroups)
+      .filter(([key]) => key.startsWith("Forgotten Joint Score (FJS)"))
+      .map(([key, values]) => {
+        const label = key.split("|")[1];
+        const name = normalizeLabel(label);
+        const boxData = parseValues(values);
+
+        const patientValue = patient?.questionnaire_scores?.find(
+          (s) =>
+            s.name === "Forgotten Joint Score (FJS)" &&
+            normalizeLabel(s.period) === name
+        );
+
+        const dotValue = patientValue?.score?.[0] ?? null;
+
+        return {
+          name,
+          boxData,
+          dotValue,
+        };
+      });
+  }, [scoreGroups, patient]);
+
+  const fjsDatabox = useBoxPlot(
+    fjsBoxPlotData.map((item, index) => {
+      const stats = computeBoxStats(item.boxData, item.dotValue);
+      return {
+        name: item.name,
+        x: index * 10,
         ...stats,
       };
     })
@@ -695,9 +881,10 @@ const page = ({ patient }) => {
                       name={labels[key]}
                       stroke={colors[i]}
                       strokeWidth={2}
-                      dot={({ cx, cy, payload }) =>
+                      dot={({ cx, cy, payload, index }) =>
                         payload.name === "SURGERY" ? null : (
                           <circle
+                            key={`dot-${index}`} // 👈 unique key here
                             cx={cx}
                             cy={cy}
                             r={3}
@@ -844,20 +1031,19 @@ const page = ({ patient }) => {
                     );
                   }}
                 />
-  
-  <ReferenceLine
-  x={surgeryIndex}
-  stroke="limegreen"
-  strokeWidth={2}
-  label={{
-    value: 'Surgery',
-    position: 'top',
-    fill: 'limegreen',
-    fontWeight: 'bold',
-    fontSize: 12,
-  }}
-/>
 
+                <ReferenceLine
+                  x={surgeryIndex}
+                  stroke="limegreen"
+                  strokeWidth={2}
+                  label={{
+                    value: "Surgery",
+                    position: "top",
+                    fill: "limegreen",
+                    fontWeight: "bold",
+                    fontSize: 12,
+                  }}
+                />
 
                 <Scatter name="Physical (PCS)" data={dataPCS} fill="red">
                   <ErrorBar
@@ -1055,7 +1241,7 @@ const page = ({ patient }) => {
             <p className="font-bold text-sm text-black">SHORT FORM 12</p>
             <ResponsiveContainer width="100%" height="90%">
               <ComposedChart
-                data={databox}
+                data={sf12Databox}
                 barCategoryGap="70%"
                 margin={{ top: 20, bottom: 20, left: 0, right: 20 }}
               >
@@ -1066,6 +1252,8 @@ const page = ({ patient }) => {
                   contentStyle={{ fontSize: 12, fontWeight: "500" }}
                   labelStyle={{ color: "#333", fontWeight: 600 }}
                   cursor={{ fill: "rgba(97, 94, 131, 0.1)" }}
+                  formatter={(value) => (isNaN(value) ? "-" : value.toString())}
+                  labelFormatter={(label) => (label ? label.toString() : "")}
                 />
 
                 <Legend
@@ -1225,7 +1413,7 @@ const page = ({ patient }) => {
             </p>
             <ResponsiveContainer width="100%" height="90%">
               <ComposedChart
-                data={databox}
+                data={koosDatabox}
                 barCategoryGap="70%"
                 margin={{ top: 20, bottom: 20, left: 0, right: 20 }}
               >
@@ -1386,7 +1574,7 @@ const page = ({ patient }) => {
             </p>
             <ResponsiveContainer width="100%" height="90%">
               <ComposedChart
-                data={databox}
+                data={kssDatabox}
                 barCategoryGap="70%"
                 margin={{ top: 20, bottom: 20, left: 0, right: 20 }}
               >
@@ -1556,7 +1744,7 @@ const page = ({ patient }) => {
             </p>
             <ResponsiveContainer width="100%" height="90%">
               <ComposedChart
-                data={databox}
+                data={fjsDatabox}
                 barCategoryGap="70%"
                 margin={{ top: 20, bottom: 20, left: 0, right: 20 }}
               >

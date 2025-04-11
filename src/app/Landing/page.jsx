@@ -44,10 +44,12 @@ const page = () => {
 
   const [selected, setSelected] = useState("home");
 const [selectedPatient, setSelectedPatient] = useState(null);
+const [groupedScores, setGroupedScores] = useState({});
 
 // This will be passed to HomeDashboard
-const handleGoToReport = (patient) => {
+const handleGoToReport = (patient, scores) => {
   setSelectedPatient(patient);
+  setGroupedScores(scores);
   setSelected("report");
 };
 
@@ -62,7 +64,7 @@ const handleGoToReport = (patient) => {
       case "home":
       return <HomeDashboard goToReport={handleGoToReport} />;
     case "report":
-      return <Patientreport patient={selectedPatient} />;
+      return <Patientreport patient={selectedPatient} scoreGroups={groupedScores}/>;
       default:
         return null;
     }
