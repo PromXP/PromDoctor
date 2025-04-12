@@ -7,8 +7,10 @@ import Image from "next/image";
 import { Poppins } from "next/font/google";
 
 import Doc from "@/app/assets/logincover.png";
-import Docbg from "@/app/assets/logincoverbg.png";
+import Docbg from "@/app/assets/doctorbg.png";
 import Docbgsm from "@/app/assets/loginsmallbg.png";
+
+import Login from "@/app/PasswordReset/page.jsx";
 
 import "@/app/globals.css";
 
@@ -17,7 +19,6 @@ const poppins = Poppins({
   weight: ["400", "600", "700"],
   variable: "--font-poppins",
 });
-
 
 export default function Home() {
   const useWindowSize = () => {
@@ -46,26 +47,30 @@ export default function Home() {
   const router = useRouter();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  
+  const [isOpen, setIsOpen] = useState(false);
 
   const handleLogin = async () => {
+    if (typeof window !== "undefined") {
     try {
       const response = await axios.post("https://promapi.onrender.com/login", {
-        identifier,
-        password,
+        identifier: identifier,
+        password: password,
         role: "doctor", // 🔒 Fixed to "doctor"
       });
-  
+
       console.log("Login successful:", response.data);
-  
+
       // Store login data for access on /Landing page
       localStorage.setItem("userData", JSON.stringify(response.data));
-  
+
       // Redirect to landing page
       router.push("/Landing");
     } catch (error) {
       console.error("Login failed:", error.response?.data || error.message);
       alert("Login failed. Please check your credentials.");
     }
+  }
   };
 
   return (
@@ -87,7 +92,9 @@ export default function Home() {
                 height > width ? "text-center" : "md:text-left"
               }`}
             >
-              <p className="font-bold text-3xl md:text-5xl text-black">DOCTOR</p>
+              <p className="font-bold text-3xl md:text-5xl text-black">
+                DOCTOR
+              </p>
               <p className="font-semibold text-2xl md:text-4xl text-[#005585]">
                 Login
               </p>
@@ -97,7 +104,7 @@ export default function Home() {
             <div className="w-full max-w-lg flex flex-col gap-8">
               <div className="relative w-full">
                 <label className="absolute left-4 -top-2 bg-white px-1 text-[#005585] text-sm">
-                Email / Phone / UHID
+                  Email / Phone / UHID
                 </label>
                 <input
                   type="text"
@@ -120,31 +127,20 @@ export default function Home() {
               </div>
 
               {/* Remember Me & Forgot Password */}
-              <div className="flex flex-wrap justify-between items-center text-sm">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="checkbox"
-                    className="h-5 w-5 text-[#005585] border-gray-300 border-4 rounded focus:ring-[#005585]"
-                  />
-                  <label
-                    htmlFor="checkbox"
-                    className="text-[#313131] font-medium"
-                  >
-                    Remember Me
-                  </label>
-                </div>
-                <p className="text-[#FF8682] cursor-pointer">
+              <div className="flex flex-wrap justify-center items-center text-sm">
+                
+                <p className="text-[#FF8682] cursor-pointer" onClick={()=>setIsOpen(true)}>
                   Forgot Password?
                 </p>
               </div>
 
-              <button className="w-full bg-[#005585] text-lg text-white py-2.5 rounded-lg cursor-pointer" onClick={handleLogin}>
+              <button
+                className="w-full bg-[#005585] text-lg text-white py-2.5 rounded-lg cursor-pointer"
+                onClick={handleLogin}
+              >
                 Login
               </button>
             </div>
-
-           
           </div>
 
           {/* Right Section - Image*/}
@@ -180,7 +176,9 @@ export default function Home() {
                 height > width ? "text-center" : "md:text-left"
               }`}
             >
-              <p className="font-bold text-3xl md:text-5xl text-black">DOCTOR</p>
+              <p className="font-bold text-3xl md:text-5xl text-black">
+                DOCTOR
+              </p>
               <p className="font-semibold text-2xl md:text-4xl text-[#005585]">
                 Login
               </p>
@@ -190,7 +188,7 @@ export default function Home() {
             <div className="w-full max-w-lg flex flex-col gap-8">
               <div className="relative w-full">
                 <label className="absolute left-4 -top-2 bg-white px-1 text-[#005585] text-sm">
-                Email / Phone / UHID
+                  Email / Phone / UHID
                 </label>
                 <input
                   type="text"
@@ -232,16 +230,25 @@ export default function Home() {
                 </p>
               </div>
 
-              <button className="w-full bg-[#005585] text-lg text-white py-2.5 rounded-lg cursor-pointer" onClick={handleLogin}>
+              <button
+                className="w-full bg-[#005585] text-lg text-white py-2.5 rounded-lg cursor-pointer"
+                onClick={handleLogin}
+              >
                 Login
               </button>
             </div>
-
-            
           </div>
 
           {/* Right Section - Image*/}
-          <div className={`relative overflow-hidden ${(height/width)<=1.5 && (height/width) >=1.3 && (height-width)>=200? "flex w-full h-full justify-center items-end p-0":"hidden"} `}>
+          <div
+            className={`relative overflow-hidden ${
+              height / width <= 1.5 &&
+              height / width >= 1.3 &&
+              height - width >= 200
+                ? "flex w-full h-full justify-center items-end p-0"
+                : "hidden"
+            } `}
+          >
             <Image
               src={Docbgsm}
               alt="Coverbackground"
@@ -255,6 +262,8 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      <Login isOpen={isOpen} onClose={() => setIsOpen(false)} />
     </>
   );
 }

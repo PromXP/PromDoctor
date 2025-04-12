@@ -6,6 +6,8 @@ import Image from "next/image";
 
 import { Poppins } from "next/font/google";
 
+import Firstimepassreset from "@/app/Firsttimepasswordreset/page.jsx";
+
 import ProfileImage from "@/app/assets/profile.png";
 import { UserIcon } from "@heroicons/react/24/outline";
 import { ChevronRightIcon, ArrowUpRightIcon } from "@heroicons/react/16/solid";
@@ -49,17 +51,27 @@ const page = ({ goToReport }) => {
 
   const [selected, setSelected] = useState(0);
 
+  const [passopen, setpassopen] = useState(false);
+
   const handleSelect = (index) => {
     setSelected(index);
   };
   const [userData, setUserData] = useState(null);
   useEffect(() => {
+    if (typeof window !== "undefined") {
     const storedUser = localStorage.getItem("userData");
     if (storedUser) {
       const parsedUser = JSON.parse(storedUser);
       console.log("Retrieved user from localStorage:", parsedUser);
+
+      if(parsedUser.user.password === "doctor@123"){
+        setpassopen(true);
+      }
+
       setUserData(parsedUser);
+
     }
+  }
   }, []);
 
   const [patients, setPatients] = useState([]);
@@ -925,6 +937,8 @@ const page = ({ goToReport }) => {
           </div>
         </div>
       </div>
+
+      <Firstimepassreset passopen={passopen} onClose={() => setpassopen(false)}/>
     </>
   );
 };
