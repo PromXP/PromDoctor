@@ -8,7 +8,6 @@ import { Poppins } from "next/font/google";
 
 import Firstimepassreset from "@/app/Firsttimepasswordreset/page.jsx";
 
-
 import ProfileImage from "@/app/assets/profile.png";
 import { UserIcon } from "@heroicons/react/24/outline";
 import { ChevronRightIcon, ArrowUpRightIcon } from "@heroicons/react/16/solid";
@@ -59,7 +58,6 @@ const page = ({ goToReport }) => {
   };
   const [userData, setUserData] = useState(null);
 
-
   useEffect(() => {
     if (typeof window !== "undefined") {
       const storedUser = localStorage.getItem("userData");
@@ -68,10 +66,9 @@ const page = ({ goToReport }) => {
         const parsedUser = JSON.parse(storedUser);
         console.log("Retrieved user from localStorage:", parsedUser);
 
-        if(parsedUser.password === "doctor@123"){
+        if (parsedUser.password === "doctor@123") {
           setpassopen(true);
         }
-  
 
         // Attempt to log in again using the stored credentials
         const loginWithStoredUser = async () => {
@@ -93,11 +90,10 @@ const page = ({ goToReport }) => {
                 password: parsedUser.password,
                 role: parsedUser.role,
               })
-
             );
 
             setUserData(response.data); // Store the full response data (e.g., tokens)
-            localStorage.setItem("uhid",response.data.user.uhid);
+            localStorage.setItem("uhid", response.data.user.uhid);
             console.log(
               "Successfully logged in with stored credentials",
               response.data.user.uhid
@@ -1047,8 +1043,10 @@ const page = ({ goToReport }) => {
         </div>
       </div>
 
-      <Firstimepassreset passopen={passopen} onClose={() => setpassopen(false)}/>
-
+      <Firstimepassreset
+        passopen={passopen}
+        onClose={() => setpassopen(false)}
+      />
     </>
   );
 };

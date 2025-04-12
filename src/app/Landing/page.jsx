@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 
 import Image from "next/image";
@@ -18,6 +18,7 @@ const poppins = Poppins({
 });
 
 const page = () => {
+  const router=useRouter();
   const useWindowSize = () => {
     const [size, setSize] = useState({
       width: 0,
@@ -193,6 +194,10 @@ const page = () => {
                 ? "bg-white/40 backdrop-blur-md shadow-lg border border-white/30"
                 : "opacity-100"
             }`}
+            onClick={()=>{
+              router.push("/");
+              localStorage.removeItem("userData");
+            }}
           >
             <svg
               width="31"
