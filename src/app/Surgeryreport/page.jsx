@@ -12,7 +12,7 @@ import Image from "next/image";
 import Closeicon from "@/app/assets/closeicon.png";
 import Calendar from "@/app/assets/calendar.png";
 
-const page = ({ isOpen, onClose, children }) => {
+const page = ({ isOpen, onClose, patient, userData, onSurgeryUpdate }) => {
   const useWindowSize = () => {
     const [size, setSize] = useState({
       width: 0,
@@ -63,7 +63,7 @@ const page = ({ isOpen, onClose, children }) => {
 
   const [warning, setWarning] = useState("");
 
-  const surgerydatacheck = () => {
+  const surgerydatacheck = async () => {
     if (selectedDate.trim() === "") {
       setWarning("Select Surgery Date");
       return;
@@ -77,12 +77,56 @@ const page = ({ isOpen, onClose, children }) => {
       return;
     }
     if (implant.trim() === "") {
-      setWarning("Enter Implante Name");
+      setWarning("Enter Implant Name");
       return;
     }
     if (technology.trim() === "") {
       setWarning("Enter Technology Name");
       return;
+    }
+
+    const payload = {
+      uhid: patient?.uhid || "", // ensure patient object is passed as prop
+      post_surgery_details: {
+        date_of_surgery: new Date(selectedDate).toISOString().split("T")[0],
+        surgeon: userData?.user?.doctor_name, // hardcoded for now
+        surgery_name: surgery,
+        procedure: procedure,
+        implant: implant,
+        technology: technology,
+      },
+    };
+
+    try {
+      const response = await fetch(
+        "https://promapi.onrender.com/update-post-surgery-details",
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setWarning(result.detail || "Failed to update surgery details");
+        return;
+      }
+      console.log("Successfully updated");
+      setWarning("Surgery details updated successfully!");
+      if (onSurgeryUpdate) {
+        onSurgeryUpdate(payload.post_surgery_details);
+      }
+      setTimeout(() => {
+        setWarning("");
+        onClose(); // close the modal
+      }, 2000);
+    } catch (error) {
+      console.error("Error:", error);
+      setWarning("Something went wrong while updating.");
     }
   };
 
@@ -176,7 +220,7 @@ const page = ({ isOpen, onClose, children }) => {
                     SURGEON
                   </p>
                   <p className="font-medium italic text-[#475467] text-sm">
-                    Dr. Jacob
+                    {userData.user.doctor_name}
                   </p>
                 </div>
               </div>
@@ -249,38 +293,44 @@ const page = ({ isOpen, onClose, children }) => {
             </div>
             <div
               className={`w-full flex ${
-                width < 570 ? "flex-col gap-4 justify-center items-center" : "flex-row"
+                width < 570
+                  ? "flex-col gap-4 justify-center items-center"
+                  : "flex-row"
               }`}
             >
-              <div className={`w-1/2 flex flex-row  items-center ${
-                width < 570 ? "justify-center " : "justify-start"
-              }`}>
-                  <p
-                    className="font-semibold italic text-[#475467] text-sm cursor-pointer"
-                    onClick={handleClearAlldsurgerydata}
-                  >
-                    CLEAR MESSAGE
-                  </p>
-                </div>
-                <div className={`w-1/2 flex flex-row items-center ${
-                width < 570 ? "justify-center " : "justify-end"
-              }`}>
-                  <p
-                    className="font-semibold rounded-full px-3 py-[1px] cursor-pointer text-center text-white text-sm border-[#005585] border-2"
-                    style={{ backgroundColor: "rgba(0, 85, 133, 0.9)" }}
-                    onClick={surgerydatacheck}
-                  >
-                    SEND
-                  </p>
-                </div>
+              <div
+                className={`w-1/2 flex flex-row  items-center ${
+                  width < 570 ? "justify-center " : "justify-start"
+                }`}
+              >
+                <p
+                  className="font-semibold italic text-[#475467] text-sm cursor-pointer"
+                  onClick={handleClearAlldsurgerydata}
+                >
+                  CLEAR MESSAGE
+                </p>
+              </div>
+              <div
+                className={`w-1/2 flex flex-row items-center ${
+                  width < 570 ? "justify-center " : "justify-end"
+                }`}
+              >
+                <p
+                  className="font-semibold rounded-full px-3 py-[1px] cursor-pointer text-center text-white text-sm border-[#005585] border-2"
+                  style={{ backgroundColor: "rgba(0, 85, 133, 0.9)" }}
+                  onClick={surgerydatacheck}
+                >
+                  SEND
+                </p>
+              </div>
             </div>
             {warning && (
-                <div className="fixed top-8 left-1/2 transform -translate-x-1/2 z-50">
-                  <div className="bg-yellow-100 border border-yellow-400 text-yellow-800 px-6 py-3 rounded-lg shadow-lg animate-fade-in-out">
-                    {warning}
-                  </div>
+              <div className="fixed top-8 left-1/2 transform -translate-x-1/2 z-50">
+                <div className="bg-yellow-100 border border-yellow-400 text-yellow-800 px-6 py-3 rounded-lg shadow-lg animate-fade-in-out">
+                  {warning}
                 </div>
-              )}
+              </div>
+            )}
           </div>
         </div>
       </div>

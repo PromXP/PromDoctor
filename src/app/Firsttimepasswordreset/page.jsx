@@ -45,7 +45,7 @@ const page = ({ passopen, onClose }) => {
     if (typeof window !== "undefined") {
       const user = JSON.parse(localStorage.getItem("userData"));
 
-      setuserUHID(user.user.uhid);
+      // setuserUHID(user.user.uhid);
       console.log("UHID", userUHID);
       // if (!userUHID.trim())
       //   return showWarning("Data not loaded");
@@ -56,7 +56,7 @@ const page = ({ passopen, onClose }) => {
         return showWarning("Passwords do not match");
 
       const payload = {
-        uhid: user.user.uhid,
+        uhid: localStorage.getItem("uhid"),
         new_password: userPassword,
       };
 

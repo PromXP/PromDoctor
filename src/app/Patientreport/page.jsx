@@ -49,51 +49,6 @@ import Surgeryreport from "@/app/Surgeryreport/page";
 
 import "@/app/globals.css";
 
-// Original raw data
-const boxPlotData = [
-  {
-    name: "PREOP",
-    boxData: [
-      22, 25, 27, 26, 24, 28, 29, 31, 30, 26, 27, 28, 29, 30, 31, 32, 33, 35,
-      36,
-    ],
-    dotValue: 29,
-  },
-  {
-    name: "6 WEEKS",
-    boxData: [
-      28, 30, 29, 31, 32, 33, 34, 35, 30, 29, 31, 32, 34, 36, 37, 33, 35, 38,
-      39,
-    ],
-    dotValue: 34,
-  },
-  {
-    name: "3 MONTHS",
-    boxData: [
-      34, 36, 38, 37, 35, 36, 37, 38, 39, 40, 36, 35, 34, 37, 38, 39, 40, 41,
-      42,
-    ],
-    dotValue: 39,
-  },
-  {
-    name: "6 MONTHS",
-    boxData: [
-      38, 39, 40, 42, 41, 40, 39, 38, 41, 42, 40, 39, 40, 41, 42, 43, 44, 45,
-      46,
-    ],
-    dotValue: 42,
-  },
-  {
-    name: "1 YEAR",
-    boxData: [
-      41, 42, 43, 44, 45, 44, 43, 42, 41, 42, 44, 45, 46, 47, 45, 46, 47, 48,
-      47,
-    ],
-    dotValue: 46,
-  },
-  
-];
-
 // === Helper functions ===
 const quantile = (arr, q) => {
   const pos = (arr.length - 1) * q;
@@ -104,7 +59,7 @@ const quantile = (arr, q) => {
 
 const mean = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
 
-const computeBoxStats = (data,mean) => {
+const computeBoxStats = (data, mean) => {
   const sorted = [...data].sort((a, b) => a - b);
   return {
     min: sorted[0],
@@ -122,7 +77,7 @@ const HorizonBar = (props) => {
 
   if (cx == null || cy == null || !payload) return null;
   const isMedian = dataKey === "_median";
-    const length = isMedian ? 30 : 10;
+  const length = isMedian ? 30 : 10;
 
   return (
     <line
@@ -155,27 +110,45 @@ const DotBar = ({ x, y, width, height }) => {
 const useBoxPlot = (boxPlots) => {
   return useMemo(
     () =>
-      boxPlots.map((v) => ({
-        name: v.name,
-        min: v.min,
-        bottomWhisker: v.lowerQuartile - v.min,
-        bottomBox: v.median - v.lowerQuartile,
-        topBox: v.upperQuartile - v.median,
-        topWhisker: v.max - v.upperQuartile,
-        medianLine: 0.0001, // dummy to render median bar
-        maxLine: 0.0001, // dummy to render max bar
-        minLine: 0.0001, // dummy to render min bar (optional)
-        average: v.average,
-        size: 250,
-        _median: v.median, // actual Y position for rendering line
-        _max: v.max,
-        _min: v.min,
-      })),
+      boxPlots.map((v) => {
+        // Ensure all required data points (min, median, etc.) are valid numbers, otherwise set to null.
+        const min = !isNaN(v.min) ? v.min : null;
+        const max = !isNaN(v.max) ? v.max : null;
+        const lowerQuartile = !isNaN(v.lowerQuartile) ? v.lowerQuartile : null;
+        const upperQuartile = !isNaN(v.upperQuartile) ? v.upperQuartile : null;
+        const median = !isNaN(v.median) ? v.median : null;
+        const average = !isNaN(v.average) ? v.average : null;
+
+        return {
+          name: v.name,
+          min: min,
+          bottomWhisker:
+            lowerQuartile !== null && min !== null ? lowerQuartile - min : null,
+          bottomBox:
+            median !== null && lowerQuartile !== null
+              ? median - lowerQuartile
+              : null,
+          topBox:
+            upperQuartile !== null && median !== null
+              ? upperQuartile - median
+              : null,
+          topWhisker:
+            max !== null && upperQuartile !== null ? max - upperQuartile : null,
+          medianLine: 0.0001, // dummy to render median bar
+          maxLine: 0.0001, // dummy to render max bar
+          minLine: 0.0001, // dummy to render min bar (optional)
+          average: average,
+          size: 250,
+          _median: median, // actual Y position for rendering line
+          _max: max,
+          _min: min,
+        };
+      }),
     [boxPlots]
   );
 };
 
-const page = () => {
+const page = ({ patient, scoreGroups, userData }) => {
   const useWindowSize = () => {
     const [size, setSize] = useState({
       width: 0,
@@ -197,86 +170,394 @@ const page = () => {
 
     return size;
   };
+  const [surgeryPatient, setsurgeryPatient] = useState({});
 
   const { width, height } = useWindowSize();
 
-  const data = [
-    { name: "-3", oks: 32, sf12: 70, koos: 68, kss: 72, fjs: 65 },
-    { name: "SURGERY", oks: 28, sf12: 65, koos: 60, kss: 67, fjs: 58 },
-    { name: "+21", oks: 34, sf12: 75, koos: 73, kss: 76, fjs: 70 },
-    { name: "+42", oks: 38, sf12: 78, koos: 75, kss: 79, fjs: 73 },
-    { name: "+90", oks: 42, sf12: 82, koos: 80, kss: 85, fjs: 80 },
-    { name: "+180", oks: 44, sf12: 85, koos: 83, kss: 88, fjs: 84 },
-    { name: "+365", oks: 46, sf12: 88, koos: 86, kss: 90, fjs: 88 },
-    { name: "+730", oks: 48, sf12: 92, koos: 90, kss: 94, fjs: 91 },
-  ];
+  const normalizePeriod = (period) =>
+    period.trim().toUpperCase().replace(/\s+/g, "");
 
-  const COLORS = {
-    oks: "#FF6384",
-    sf12: "#36A2EB",
-    koos: "#FFCE56",
-    kss: "#4BC0C0",
-    fjs: "#9966FF",
+  const getScoreByPeriodAndType = (scores, period, type) => {
+    const match = scores.find(
+      (s) =>
+        normalizePeriod(s.period) === normalizePeriod(period) &&
+        s.name.toLowerCase().includes(type.toLowerCase())
+    );
+    return match ? match.score[0] : null;
   };
 
-  //   const data1 = [
-  //     { name: "A", x: "A", y: 80 },
-  //     { name: "B", x: "B", y: 100 },
-  //     { name: "C", x: "C", y: 60 },
-  //   ];
+  const generateChartData = (patient) => {
+    const scores = patient?.questionnaire_scores || [];
 
-  //   // Add ±10 error to each point
-  //   const processedData = data1.map((d) => ({
-  //     ...d,
-  //     error: [10, 10],
-  //   }));
+    const periodMap = {
+      "-3": "PRE OP",
+      "3W": "3W", // 👈 Add this
+      SURGERY: "SURGERY",
+      "+42": "6W",
+      "+90": "3M",
+      "+180": "6M",
+      "+365": "1Y",
+      "+730": "2Y",
+    };
 
-  const transformedData = [
-    { name: "-3", pcs: 28.67, mcs: 33.75 },
-    { name: "SURGERY", pcs: 25.83, mcs: 30.75 },
-    { name: "+21", pcs: 30.5, mcs: 36.25 },
-    { name: "+42", pcs: 32.67, mcs: 37.75 },
-    { name: "+90", pcs: 34.25, mcs: 41 },
-    { name: "+180", pcs: 36.25, mcs: 42.25 },
-    { name: "+365", pcs: 37.33, mcs: 44 },
-    { name: "+730", pcs: 38.67, mcs: 45.75 },
-  ];
+    const timeOrder = {
+      "-3": -3,
+      "3W": 21, // 👈 Approximate 3 weeks in days
+      SURGERY: 10,
+      "+42": 42,
+      "+90": 90,
+      "+180": 180,
+      "+365": 365,
+      "+730": 730,
+    };
 
-  const dataPCS = transformedData
-    .map((item, index) => ({
-      x: index - 0.1,
-      label: item.name,
-      y: Math.round(Math.abs(item.pcs)),
-      error: [10, 10],
+    // Check if a period exists in the questionnaire_scores
+    const hasPeriodData = (periodKey) => {
+      return scores.some(
+        (s) =>
+          normalizePeriod(s.period) === normalizePeriod(periodMap[periodKey])
+      );
+    };
+
+    // Always include surgery, include others only if data exists
+    const periods = Object.keys(periodMap).filter(
+      (key) => key === "SURGERY" || hasPeriodData(key)
+    );
+
+    const chartData = periods.map((label) => {
+      const periodKey = periodMap[label];
+
+      return {
+        name: periodKey,
+        oks:
+          label === "SURGERY"
+            ? undefined
+            : getScoreByPeriodAndType(scores, periodKey, "Oxford Knee Score"),
+        sf12:
+          label === "SURGERY"
+            ? undefined
+            : getScoreByPeriodAndType(scores, periodKey, "SF-12") || 0,
+        koos:
+          label === "SURGERY"
+            ? undefined
+            : getScoreByPeriodAndType(scores, periodKey, "KOOS"),
+        kss:
+          label === "SURGERY"
+            ? undefined
+            : getScoreByPeriodAndType(scores, periodKey, "KSS"),
+        fjs:
+          label === "SURGERY"
+            ? undefined
+            : getScoreByPeriodAndType(scores, periodKey, "FJS") || 0,
+        _order: timeOrder[label],
+      };
+    });
+
+    return chartData
+      .sort((a, b) => a._order - b._order)
+      .map(({ _order, ...rest }) => rest);
+  };
+
+  const data = patient ? generateChartData(patient) : [];
+
+  const rawScores = patient?.questionnaire_scores ?? [];
+
+  // Define the custom order for the periods
+  const periodOrder = ["PRE OP", "SURGERY", "3W", "6W", "3M", "6M", "1Y", "2Y"];
+
+  // Filter, map and sort the data
+  const sf12Data = rawScores
+    .filter((q) => q.name.includes("Short Form") && q.name.includes("12")) // Filter only SF-12 questionnaire scores
+    .map((q, index) => ({
+      name: q.period || `Day ${index + 1}`, // Dynamically set the period or default to Day {index + 1}
+      x: index, // Index for x-axis
+      pScore: q.score?.[1] ?? null, // Physical score (PCS)
+      mScore: q.score?.[2] ?? null, // Mental score (MCS)
     }))
-    .filter((item) => item.label !== "SURGERY");
+    .sort((a, b) => {
+      // Get the index of the period in the custom period order
+      const aIndex = periodOrder.indexOf(a.name);
+      const bIndex = periodOrder.indexOf(b.name);
 
-  const dataMCS = transformedData
-    .map((item, index) => ({
-      x: index + 0.1,
-      label: item.name,
-      y: Math.round(Math.abs(item.mcs)),
-      error: [10, 10],
-    }))
-    .filter((item) => item.label !== "SURGERY");
+      // If a.name is not in periodOrder, treat it as the last one
+      return aIndex === -1 ? 1 : bIndex === -1 ? -1 : aIndex - bIndex;
+    });
 
-  const surgeryIndex = transformedData.findIndex(
-    (item) => item.name === "SURGERY"
+  // Extract name for transformedData (could be expanded with additional properties if needed)
+  const transformedData = (sf12Data ?? []).map(({ name }) => ({ name }));
+
+  // Dynamic PCS Data - Filtering out null pScores and setting error to [10, 10]
+  const dataPCS = sf12Data
+    .filter((d) => d.pScore !== null) // Filter out null pScores
+    .map((d, index) => ({
+      x: index - 0.1, // Set x value for PCS (index - 0.1)
+      y: d.pScore, // y value for PCS score
+      error: [10, 10], // Fixed error bars [10, 10]
+    }));
+
+  // Dynamic MCS Data - Filtering out null mScores and setting error to [10, 10]
+  const dataMCS = sf12Data
+    .filter((d) => d.mScore !== null) // Filter out null mScores
+    .map((d, index) => ({
+      x: index + 0.1, // Set x value for MCS (index + 0.1)
+      y: d.mScore, // y value for MCS score
+      error: [10, 10], // Fixed error bars [10, 10]
+    }));
+
+  // Finding the surgery index, if available
+  const surgeryIndex = sf12Data.findIndex(
+    (d) => d.name.toLowerCase().includes("Surgery") // Dynamically find the surgery index
   );
 
+  const normalizeLabel = (label) => {
+    const map = {
+      "PRE OP": "PREOP",
+      "3W": "3 WEEKS",
+      "6W": "6 WEEKS",
+      "3M": "3 MONTHS",
+      "6M": "6 MONTHS",
+      "1Y": "1 YEAR",
+      "2Y": "2 YEAR",
+    };
+
+    // Convert label to uppercase, trim whitespace, and check the mapping
+    const normalizedLabel = label.trim().toUpperCase();
+
+    return map[normalizedLabel] || normalizedLabel;
+  };
+
+  const parseValues = (arr) => {
+    if (!arr || arr.length === 0) return null; // Return null if the array is empty
+
+    return arr
+      .map((val) => val.split(","))
+      .flat()
+      .map((v) => parseFloat(v))
+      .filter((v) => !isNaN(v));
+  };
+
+  const boxPlotData = useMemo(() => {
+    if (!scoreGroups) return [];
+
+    const timepoints = [
+      "PREOP",
+      "3 WEEKS",
+      "6 WEEKS",
+      "3 MONTHS",
+      "6 MONTHS",
+      "1 YEAR",
+      "2 YEARS",
+    ]; // Explicit timepoint list
+
+    let data = Object.entries(scoreGroups)
+      .filter(([key]) => key.startsWith("Oxford Knee Score (OKS)"))
+      .map(([key, values]) => {
+        const label = key.split("|")[1];
+        const name = normalizeLabel(label);
+        const boxData = parseValues(values);
+
+        // Find exact OKS match for this timepoint
+        const patientValue = patient?.questionnaire_scores?.find(
+          (s) =>
+            s.name === "Oxford Knee Score (OKS)" &&
+            normalizeLabel(s.period) === name
+        );
+
+        const dotValue = patientValue?.score?.[0] ?? null;
+
+        return {
+          name,
+          boxData,
+          dotValue,
+        };
+      });
+
+    // Ensure the boxPlotData is an array before performing .some()
+    return data.concat(
+      timepoints
+        .filter((timepoint) => !data.some((item) => item.name === timepoint))
+        .map((timepoint) => ({
+          name: timepoint,
+          boxData: [],
+          dotValue: null,
+        }))
+    );
+  }, [scoreGroups, patient]);
 
   const databox = useBoxPlot(
-    boxPlotData.map((item, index) => {
+    (boxPlotData ?? []).map((item, index) => {
       const stats = computeBoxStats(item.boxData, item.dotValue);
       return {
         name: item.name,
-        x: index * 10, // ← spacing between box plots here
+        x: index * 10, // Adjust x spacing if needed
         ...stats,
       };
     })
   );
 
-  console.log("Box plot:", JSON.stringify(databox, null, 2));
+  // SF-12 data processing
+  const sf12BoxPlotData = useMemo(() => {
+    if (!scoreGroups) return [];
+    return Object.entries(scoreGroups)
+      .filter(([key]) => key.startsWith("Short Form - 12 (SF-12)"))
+      .map(([key, values]) => {
+        const label = key.split("|")[1];
+        const name = normalizeLabel(label);
+        const boxData = parseValues(values);
+
+        const patientValue = patient?.questionnaire_scores?.find(
+          (s) =>
+            s.name === "Short Form - 12 (SF-12)" &&
+            normalizeLabel(s.period) === name
+        );
+
+        const dotValue = patientValue?.score?.[0] ?? null;
+
+        return {
+          name,
+          boxData,
+          dotValue,
+        };
+      });
+  }, [scoreGroups, patient]);
+
+  const sf12Databox = useBoxPlot(
+    (sf12BoxPlotData ?? []).map((item, index) => {
+      const stats = computeBoxStats(item.boxData, item.dotValue);
+      return {
+        name: item.name,
+        x: index * 10,
+        ...stats,
+      };
+    })
+  );
+
+  // KOOS data
+  const koosBoxPlotData = useMemo(() => {
+    if (!scoreGroups) return [];
+    return Object.entries(scoreGroups)
+      .filter(([key]) =>
+        key.startsWith("Knee injury and Osteoarthritis Outcome Score (KOOS)")
+      )
+      .map(([key, values]) => {
+        const label = key.split("|")[1];
+        const name = normalizeLabel(label);
+        const boxData = parseValues(values);
+
+        const patientValue = patient?.questionnaire_scores?.find(
+          (s) =>
+            s.name === "Knee injury and Osteoarthritis Outcome Score (KOOS)" &&
+            normalizeLabel(s.period) === name
+        );
+
+        const dotValue = patientValue?.score?.[0] ?? null;
+
+        return {
+          name,
+          boxData,
+          dotValue,
+        };
+      });
+  }, [scoreGroups, patient]);
+
+  const koosDatabox = useBoxPlot(
+    (koosBoxPlotData ?? []).map((item, index) => {
+      const stats = computeBoxStats(item.boxData, item.dotValue);
+      return {
+        name: item.name,
+        x: index * 10,
+        ...stats,
+      };
+    })
+  );
+
+  // KSS data
+  const kssBoxPlotData = useMemo(() => {
+    if (!scoreGroups) return [];
+    return Object.entries(scoreGroups)
+      .filter(([key]) => key.startsWith("Knee Society Score (KSS)"))
+      .map(([key, values]) => {
+        const label = key.split("|")[1];
+        const name = normalizeLabel(label);
+        const boxData = parseValues(values);
+
+        const patientValue = patient?.questionnaire_scores?.find(
+          (s) =>
+            s.name === "Knee Society Score (KSS)" &&
+            normalizeLabel(s.period) === name
+        );
+
+        const dotValue = patientValue?.score?.[0] ?? null;
+
+        return {
+          name,
+          boxData,
+          dotValue,
+        };
+      });
+  }, [scoreGroups, patient]);
+
+  const kssDatabox = useBoxPlot(
+    (kssBoxPlotData ?? []).map((item, index) => {
+      const stats = computeBoxStats(item.boxData, item.dotValue);
+      return {
+        name: item.name,
+        x: index * 10,
+        ...stats,
+      };
+    })
+  );
+
+  // FJS data
+  const fjsBoxPlotData = useMemo(() => {
+    if (!scoreGroups) return [];
+    return Object.entries(scoreGroups)
+      .filter(([key]) => key.startsWith("Forgotten Joint Score (FJS)"))
+      .map(([key, values]) => {
+        const label = key.split("|")[1];
+        const name = normalizeLabel(label);
+        const boxData = parseValues(values);
+
+        const patientValue = patient?.questionnaire_scores?.find(
+          (s) =>
+            s.name === "Forgotten Joint Score (FJS)" &&
+            normalizeLabel(s.period) === name
+        );
+
+        const dotValue = patientValue?.score?.[0] ?? null;
+
+        return {
+          name,
+          boxData,
+          dotValue,
+        };
+      });
+  }, [scoreGroups, patient]);
+
+  const fjsDatabox = useBoxPlot(
+    (fjsBoxPlotData ?? []).map((item, index) => {
+      const stats = computeBoxStats(item.boxData, item.dotValue);
+      return {
+        name: item.name,
+        x: index * 10,
+        ...stats,
+      };
+    })
+  );
+
+  const isPostSurgeryDetailsFilled = (details) => {
+    if (!details) return false;
+    const { surgeon, surgery_name, procedure, implant, technology } = details;
+    return (
+      surgeon?.trim() &&
+      surgery_name?.trim() &&
+      procedure?.trim() &&
+      implant?.trim() &&
+      technology?.trim()
+    );
+  };
+
+  // console.log("Box plot:", JSON.stringify(databox, null, 2));
 
   const [isOpen, setIsOpen] = useState(false);
 
@@ -332,7 +613,7 @@ const page = () => {
                           width < 530 ? "text-start" : ""
                         }`}
                       >
-                        ALEX HALES
+                        {patient?.first_name + " " + patient?.last_name}
                       </p>
                     </div>
                     <div
@@ -348,14 +629,14 @@ const page = () => {
                         }
                           w-1/2`}
                       >
-                        25, Male
+                        {patient?.age}, {patient?.gender}
                       </p>
                       <div
                         className={`text-sm font-normal font-poppins text-[#475467] w-1/2 ${
                           width < 530 ? "text-center" : ""
                         }`}
                       >
-                        UHID 12345678
+                        UHID {patient?.uhid}
                       </div>
                     </div>
                   </div>
@@ -378,7 +659,9 @@ const page = () => {
                       }`}
                     >
                       <p className="text-[#475467] font-semibold text-5">BMI</p>
-                      <p className="text-[#04CE00] font-bold text-6">22.8</p>
+                      <p className="text-[#04CE00] font-bold text-6">
+                        {patient?.bmi}
+                      </p>
                     </div>
                     <div
                       className={` flex flex-col gap-3 ${
@@ -391,7 +674,7 @@ const page = () => {
                         STATUS
                       </p>
                       <p className="text-[#F86060] font-bold text-6">
-                        POST OPERATIVE
+                        {patient?.current_status}
                       </p>
                     </div>
                     <div
@@ -405,10 +688,24 @@ const page = () => {
                         SURGERY REPORT
                       </p>
                       <div className="w-full flex flex-row items-center gap-2">
-                        <p className="text-[#F86060] font-bold text-6">
-                          PENDING
-                        </p>
-                        <PencilSquareIcon className="w-5 h-5 text-black cursor-pointer" onClick={() => setIsOpen(true)}/>
+                        {isPostSurgeryDetailsFilled(
+                          surgeryPatient?.post_surgery_details ||
+                            patient?.post_surgery_details
+                        ) ? (
+                          <p className="text-green-600 font-bold text-6">
+                            COMPLETED
+                          </p>
+                        ) : (
+                          <>
+                            <p className="text-[#F86060] font-bold text-6">
+                              PENDING
+                            </p>
+                            <PencilSquareIcon
+                              className="w-5 h-5 text-black cursor-pointer"
+                              onClick={() => setIsOpen(true)}
+                            />
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -425,9 +722,17 @@ const page = () => {
             : "w-[95%] flex-col"
         }`}
       >
-        <div className={`w-full flex   gap-4 ${width<1415?"flex-col justify-center items-center h-[1000px]":"flex-row h-[400px]"}`}>
+        <div
+          className={`w-full flex   gap-4 ${
+            width < 1415
+              ? "flex-col justify-center items-center h-[1000px]"
+              : "flex-row h-[400px]"
+          }`}
+        >
           <div
-            className={` flex flex-col bg-white px-4 py-2 rounded-2xl shadow-lg ${width<1415?"w-full h-1/2":"w-1/2"}`}
+            className={` flex flex-col bg-white px-4 py-2 rounded-2xl shadow-lg ${
+              width < 1415 ? "w-full h-1/2" : "w-1/2"
+            }`}
           >
             <p className="font-bold text-sm text-black">PROM ANALYSIS</p>
             <ResponsiveContainer width="100%" height="90%">
@@ -584,12 +889,14 @@ const page = () => {
                       key={key}
                       type="monotone"
                       dataKey={key}
+                      connectNulls={true}
                       name={labels[key]}
                       stroke={colors[i]}
                       strokeWidth={2}
-                      dot={({ cx, cy, payload }) =>
+                      dot={({ cx, cy, payload, index }) =>
                         payload.name === "SURGERY" ? null : (
                           <circle
+                            key={`dot-${index}`} // 👈 unique key here
                             cx={cx}
                             cy={cy}
                             r={3}
@@ -616,7 +923,9 @@ const page = () => {
             </ResponsiveContainer>
           </div>
           <div
-            className={`flex flex-col bg-white px-4 py-2 rounded-2xl shadow-lg ${width<1415?"w-full h-1/2":"w-1/2"}`}
+            className={`flex flex-col bg-white px-4 py-2 rounded-2xl shadow-lg ${
+              width < 1415 ? "w-full h-1/2" : "w-1/2"
+            }`}
           >
             <p className="font-bold text-sm text-black">
               SHORT FORM 12 (PCS vs MCS)
@@ -739,6 +1048,13 @@ const page = () => {
                   x={surgeryIndex}
                   stroke="limegreen"
                   strokeWidth={2}
+                  label={{
+                    value: "Surgery",
+                    position: "top",
+                    fill: "limegreen",
+                    fontWeight: "bold",
+                    fontSize: 12,
+                  }}
                 />
 
                 <Scatter name="Physical (PCS)" data={dataPCS} fill="red">
@@ -763,9 +1079,17 @@ const page = () => {
           </div>
         </div>
 
-        <div className={`w-full flex   gap-4 ${width<1415?"flex-col justify-center items-center h-[1000px]":"flex-row h-[400px]"}`}>
+        <div
+          className={`w-full flex   gap-4 ${
+            width < 1415
+              ? "flex-col justify-center items-center h-[1000px]"
+              : "flex-row h-[400px]"
+          }`}
+        >
           <div
-            className={`flex flex-col bg-white px-4 py-2 rounded-2xl shadow-lg ${width<1415?"w-full h-1/2":"w-1/2"}`}
+            className={`flex flex-col bg-white px-4 py-2 rounded-2xl shadow-lg ${
+              width < 1415 ? "w-full h-1/2" : "w-1/2"
+            }`}
           >
             <p className="font-bold text-sm text-black">OXFORD KNEE SCORE </p>
             <ResponsiveContainer width="100%" height="90%">
@@ -776,10 +1100,47 @@ const page = () => {
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
 
-                {/* ✅ Tooltip */}
                 <Tooltip
-                  contentStyle={{ fontSize: 12, fontWeight: "500" }}
-                  labelStyle={{ color: "#333", fontWeight: 600 }}
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload || !Array.isArray(payload))
+                      return null;
+
+                    const safeLabel =
+                      typeof label === "number" || typeof label === "string"
+                        ? label
+                        : "Unknown";
+
+                    return (
+                      <div
+                        style={{
+                          background: "#fff",
+                          padding: "8px",
+                          border: "1px solid #ccc",
+                        }}
+                      >
+                        <p
+                          style={{ fontWeight: "bold", margin: 0 }}
+                        >{`Day: ${safeLabel}`}</p>
+                        {payload.map((entry, index) => {
+                          const value = entry?.value;
+                          return (
+                            <p
+                              key={index}
+                              style={{
+                                margin: 0,
+                                color: entry?.color ?? "#000",
+                              }}
+                            >
+                              {entry.name}:{" "}
+                              {typeof value === "number"
+                                ? value.toFixed(2)
+                                : "N/A"}
+                            </p>
+                          );
+                        })}
+                      </div>
+                    );
+                  }}
                   cursor={{ fill: "rgba(97, 94, 131, 0.1)" }}
                 />
 
@@ -855,13 +1216,14 @@ const page = () => {
                   data={databox}
                   shape={(props) => <HorizonBar {...props} dataKey="_median" />}
                   dataKey="_median"
-                  
                 />
 
                 {/* Min Line */}
                 <Scatter
                   data={databox}
-                  shape={(props) => <HorizonBar {...props} dataKey="_min" stroke="#4A3AFF"/>}
+                  shape={(props) => (
+                    <HorizonBar {...props} dataKey="_min" stroke="#4A3AFF" />
+                  )}
                   dataKey="_min"
                 />
 
@@ -920,23 +1282,63 @@ const page = () => {
               </ComposedChart>
             </ResponsiveContainer>
           </div>
-          <div className={`flex flex-col bg-white px-4 py-2 rounded-2xl shadow-lg ${width<1415?"w-full h-1/2":"w-1/2"}`}>
-          <p className="font-bold text-sm text-black">SHORT FORM 12</p>
+          <div
+            className={`flex flex-col bg-white px-4 py-2 rounded-2xl shadow-lg ${
+              width < 1415 ? "w-full h-1/2" : "w-1/2"
+            }`}
+          >
+            <p className="font-bold text-sm text-black">SHORT FORM 12</p>
             <ResponsiveContainer width="100%" height="90%">
               <ComposedChart
-                data={databox}
+                data={sf12Databox}
                 barCategoryGap="70%"
                 margin={{ top: 20, bottom: 20, left: 0, right: 20 }}
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
 
-                {/* ✅ Tooltip */}
                 <Tooltip
-                  contentStyle={{ fontSize: 12, fontWeight: "500" }}
-                  labelStyle={{ color: "#333", fontWeight: 600 }}
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload || !Array.isArray(payload))
+                      return null;
+
+                    const safeLabel =
+                      typeof label === "number" || typeof label === "string"
+                        ? label
+                        : "Unknown";
+
+                    return (
+                      <div
+                        style={{
+                          background: "#fff",
+                          padding: "8px",
+                          border: "1px solid #ccc",
+                        }}
+                      >
+                        <p
+                          style={{ fontWeight: "bold", margin: 0 }}
+                        >{`Day: ${safeLabel}`}</p>
+                        {payload.map((entry, index) => {
+                          const value = entry?.value;
+                          return (
+                            <p
+                              key={index}
+                              style={{
+                                margin: 0,
+                                color: entry?.color ?? "#000",
+                              }}
+                            >
+                              {entry.name}:{" "}
+                              {typeof value === "number"
+                                ? value.toFixed(2)
+                                : "N/A"}
+                            </p>
+                          );
+                        })}
+                      </div>
+                    );
+                  }}
                   cursor={{ fill: "rgba(97, 94, 131, 0.1)" }}
                 />
-
                 <Legend
                   verticalAlign="top"
                   align="right"
@@ -1009,13 +1411,14 @@ const page = () => {
                   data={databox}
                   shape={(props) => <HorizonBar {...props} dataKey="_median" />}
                   dataKey="_median"
-                  
                 />
 
                 {/* Min Line */}
                 <Scatter
                   data={databox}
-                  shape={(props) => <HorizonBar {...props} dataKey="_min" stroke="#4A3AFF"/>}
+                  shape={(props) => (
+                    <HorizonBar {...props} dataKey="_min" stroke="#4A3AFF" />
+                  )}
                   dataKey="_min"
                 />
 
@@ -1072,26 +1475,74 @@ const page = () => {
                   tickLine={{ stroke: "#615E83" }}
                 />
               </ComposedChart>
-            </ResponsiveContainer></div>
+            </ResponsiveContainer>
+          </div>
         </div>
 
-        <div className={`w-full flex   gap-4 ${width<1415?"flex-col justify-center items-center h-[1000px]":"flex-row h-[400px]"}`}>
+        <div
+          className={`w-full flex   gap-4 ${
+            width < 1415
+              ? "flex-col justify-center items-center h-[1000px]"
+              : "flex-row h-[400px]"
+          }`}
+        >
           <div
-            className={`flex flex-col bg-white px-4 py-2 rounded-2xl shadow-lg ${width<1415?"w-full h-1/2":"w-1/2"}`}
+            className={`flex flex-col bg-white px-4 py-2 rounded-2xl shadow-lg ${
+              width < 1415 ? "w-full h-1/2" : "w-1/2"
+            }`}
           >
-            <p className="font-bold text-sm text-black">KNEE INJURY AND OSTEOARTHRITIS OUTCOME SCORE (KOOS)</p>
+            <p className="font-bold text-sm text-black">
+              KNEE INJURY AND OSTEOARTHRITIS OUTCOME SCORE (KOOS)
+            </p>
             <ResponsiveContainer width="100%" height="90%">
               <ComposedChart
-                data={databox}
+                data={koosDatabox}
                 barCategoryGap="70%"
                 margin={{ top: 20, bottom: 20, left: 0, right: 20 }}
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
 
-                {/* ✅ Tooltip */}
                 <Tooltip
-                  contentStyle={{ fontSize: 12, fontWeight: "500" }}
-                  labelStyle={{ color: "#333", fontWeight: 600 }}
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload || !Array.isArray(payload))
+                      return null;
+
+                    const safeLabel =
+                      typeof label === "number" || typeof label === "string"
+                        ? label
+                        : "Unknown";
+
+                    return (
+                      <div
+                        style={{
+                          background: "#fff",
+                          padding: "8px",
+                          border: "1px solid #ccc",
+                        }}
+                      >
+                        <p
+                          style={{ fontWeight: "bold", margin: 0 }}
+                        >{`Day: ${safeLabel}`}</p>
+                        {payload.map((entry, index) => {
+                          const value = entry?.value;
+                          return (
+                            <p
+                              key={index}
+                              style={{
+                                margin: 0,
+                                color: entry?.color ?? "#000",
+                              }}
+                            >
+                              {entry.name}:{" "}
+                              {typeof value === "number"
+                                ? value.toFixed(2)
+                                : "N/A"}
+                            </p>
+                          );
+                        })}
+                      </div>
+                    );
+                  }}
                   cursor={{ fill: "rgba(97, 94, 131, 0.1)" }}
                 />
 
@@ -1167,13 +1618,14 @@ const page = () => {
                   data={databox}
                   shape={(props) => <HorizonBar {...props} dataKey="_median" />}
                   dataKey="_median"
-                  
                 />
 
                 {/* Min Line */}
                 <Scatter
                   data={databox}
-                  shape={(props) => <HorizonBar {...props} dataKey="_min" stroke="#4A3AFF"/>}
+                  shape={(props) => (
+                    <HorizonBar {...props} dataKey="_min" stroke="#4A3AFF" />
+                  )}
                   dataKey="_min"
                 />
 
@@ -1232,20 +1684,63 @@ const page = () => {
               </ComposedChart>
             </ResponsiveContainer>
           </div>
-          <div className={`flex flex-col bg-white px-4 py-2 rounded-2xl shadow-lg ${width<1415?"w-full h-1/2":"w-1/2"}`}>
-          <p className="font-bold text-sm text-black">KNEE SOCIETY SCORE (KSS)</p>
+          <div
+            className={`flex flex-col bg-white px-4 py-2 rounded-2xl shadow-lg ${
+              width < 1415 ? "w-full h-1/2" : "w-1/2"
+            }`}
+          >
+            <p className="font-bold text-sm text-black">
+              KNEE SOCIETY SCORE (KSS)
+            </p>
             <ResponsiveContainer width="100%" height="90%">
               <ComposedChart
-                data={databox}
+                data={kssDatabox}
                 barCategoryGap="70%"
                 margin={{ top: 20, bottom: 20, left: 0, right: 20 }}
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
 
-                {/* ✅ Tooltip */}
                 <Tooltip
-                  contentStyle={{ fontSize: 12, fontWeight: "500" }}
-                  labelStyle={{ color: "#333", fontWeight: 600 }}
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload || !Array.isArray(payload))
+                      return null;
+
+                    const safeLabel =
+                      typeof label === "number" || typeof label === "string"
+                        ? label
+                        : "Unknown";
+
+                    return (
+                      <div
+                        style={{
+                          background: "#fff",
+                          padding: "8px",
+                          border: "1px solid #ccc",
+                        }}
+                      >
+                        <p
+                          style={{ fontWeight: "bold", margin: 0 }}
+                        >{`Day: ${safeLabel}`}</p>
+                        {payload.map((entry, index) => {
+                          const value = entry?.value;
+                          return (
+                            <p
+                              key={index}
+                              style={{
+                                margin: 0,
+                                color: entry?.color ?? "#000",
+                              }}
+                            >
+                              {entry.name}:{" "}
+                              {typeof value === "number"
+                                ? value.toFixed(2)
+                                : "N/A"}
+                            </p>
+                          );
+                        })}
+                      </div>
+                    );
+                  }}
                   cursor={{ fill: "rgba(97, 94, 131, 0.1)" }}
                 />
 
@@ -1321,13 +1816,14 @@ const page = () => {
                   data={databox}
                   shape={(props) => <HorizonBar {...props} dataKey="_median" />}
                   dataKey="_median"
-                  
                 />
 
                 {/* Min Line */}
                 <Scatter
                   data={databox}
-                  shape={(props) => <HorizonBar {...props} dataKey="_min" stroke="#4A3AFF"/>}
+                  shape={(props) => (
+                    <HorizonBar {...props} dataKey="_min" stroke="#4A3AFF" />
+                  )}
                   dataKey="_min"
                 />
 
@@ -1384,26 +1880,74 @@ const page = () => {
                   tickLine={{ stroke: "#615E83" }}
                 />
               </ComposedChart>
-            </ResponsiveContainer></div>
+            </ResponsiveContainer>
+          </div>
         </div>
 
-        <div className={`w-full flex   gap-4 ${width<1415?"flex-col justify-center items-center h-[500px]":"flex-row h-[400px]"}`}>
+        <div
+          className={`w-full flex   gap-4 ${
+            width < 1415
+              ? "flex-col justify-center items-center h-[500px]"
+              : "flex-row h-[400px]"
+          }`}
+        >
           <div
-            className={`flex flex-col bg-white px-4 py-2 rounded-2xl shadow-lg ${width<1415?"w-full h-full":"w-1/2"}`}
+            className={`flex flex-col bg-white px-4 py-2 rounded-2xl shadow-lg ${
+              width < 1415 ? "w-full h-full" : "w-1/2"
+            }`}
           >
-            <p className="font-bold text-sm text-black">FORGOTTEN JOINT SCORE (FJS) </p>
+            <p className="font-bold text-sm text-black">
+              FORGOTTEN JOINT SCORE (FJS){" "}
+            </p>
             <ResponsiveContainer width="100%" height="90%">
               <ComposedChart
-                data={databox}
+                data={fjsDatabox}
                 barCategoryGap="70%"
                 margin={{ top: 20, bottom: 20, left: 0, right: 20 }}
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
 
-                {/* ✅ Tooltip */}
                 <Tooltip
-                  contentStyle={{ fontSize: 12, fontWeight: "500" }}
-                  labelStyle={{ color: "#333", fontWeight: 600 }}
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload || !Array.isArray(payload))
+                      return null;
+
+                    const safeLabel =
+                      typeof label === "number" || typeof label === "string"
+                        ? label
+                        : "Unknown";
+
+                    return (
+                      <div
+                        style={{
+                          background: "#fff",
+                          padding: "8px",
+                          border: "1px solid #ccc",
+                        }}
+                      >
+                        <p
+                          style={{ fontWeight: "bold", margin: 0 }}
+                        >{`Day: ${safeLabel}`}</p>
+                        {payload.map((entry, index) => {
+                          const value = entry?.value;
+                          return (
+                            <p
+                              key={index}
+                              style={{
+                                margin: 0,
+                                color: entry?.color ?? "#000",
+                              }}
+                            >
+                              {entry.name}:{" "}
+                              {typeof value === "number"
+                                ? value.toFixed(2)
+                                : "N/A"}
+                            </p>
+                          );
+                        })}
+                      </div>
+                    );
+                  }}
                   cursor={{ fill: "rgba(97, 94, 131, 0.1)" }}
                 />
 
@@ -1479,13 +2023,14 @@ const page = () => {
                   data={databox}
                   shape={(props) => <HorizonBar {...props} dataKey="_median" />}
                   dataKey="_median"
-                  
                 />
 
                 {/* Min Line */}
                 <Scatter
                   data={databox}
-                  shape={(props) => <HorizonBar {...props} dataKey="_min" stroke="#4A3AFF"/>}
+                  shape={(props) => (
+                    <HorizonBar {...props} dataKey="_min" stroke="#4A3AFF" />
+                  )}
                   dataKey="_min"
                 />
 
@@ -1544,11 +2089,21 @@ const page = () => {
               </ComposedChart>
             </ResponsiveContainer>
           </div>
-    
         </div>
       </div>
 
-      <Surgeryreport isOpen={isOpen} onClose={()=>setIsOpen(false)}/>
+      <Surgeryreport
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        patient={patient}
+        userData={userData}
+        onSurgeryUpdate={(updatedDetails) => {
+          setsurgeryPatient((prev) => ({
+            ...prev,
+            post_surgery_details: updatedDetails,
+          }));
+        }}
+      />
     </>
   );
 };

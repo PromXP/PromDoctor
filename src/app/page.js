@@ -10,7 +10,7 @@ import Doc from "@/app/assets/logincover.png";
 import Docbg from "@/app/assets/doctorbg.png";
 import Docbgsm from "@/app/assets/loginsmallbg.png";
 
-import Login from "@/app/PasswordReset/page.jsx";
+import PasswordReset from "@/app/PasswordReset/page.jsx";
 
 import "@/app/globals.css";
 
@@ -47,30 +47,41 @@ export default function Home() {
   const router = useRouter();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
-  
+
+  const [loading, setLoading] = useState(false);
+
   const [isOpen, setIsOpen] = useState(false);
 
   const handleLogin = async () => {
     if (typeof window !== "undefined") {
-    try {
-      const response = await axios.post("https://promapi.onrender.com/login", {
-        identifier: identifier,
-        password: password,
-        role: "doctor", // 🔒 Fixed to "doctor"
-      });
+      setLoading(true);
+      try {
+        const response = await axios.post(
+          "https://promapi.onrender.com/login",
+          {
+            identifier,
+            password,
+            role: "doctor",
+          }
+        );
 
-      console.log("Login successful:", response.data);
+        // Store only identifier, password, and role in localStorage
+        localStorage.setItem(
+          "userData",
+          JSON.stringify({
+            identifier,
+            password,
+            role: "doctor",
+          })
+        );
 
-      // Store login data for access on /Landing page
-      localStorage.setItem("userData", JSON.stringify(response.data));
-
-      // Redirect to landing page
-      router.push("/Landing");
-    } catch (error) {
-      console.error("Login failed:", error.response?.data || error.message);
-      alert("Login failed. Please check your credentials.");
+        router.push("/Landing");
+      } catch (error) {
+        alert("Login failed. Please check your credentials.");
+      } finally {
+        setLoading(false);
+      }
     }
-  }
   };
 
   return (
@@ -128,7 +139,6 @@ export default function Home() {
 
               {/* Remember Me & Forgot Password */}
               <div className="flex flex-wrap justify-center items-center text-sm">
-                
                 <p className="text-[#FF8682] cursor-pointer" onClick={()=>setIsOpen(true)}>
                   Forgot Password?
                 </p>
@@ -138,7 +148,7 @@ export default function Home() {
                 className="w-full bg-[#005585] text-lg text-white py-2.5 rounded-lg cursor-pointer"
                 onClick={handleLogin}
               >
-                Login
+                {loading ? "Logging in..." : "Login"}
               </button>
             </div>
           </div>
@@ -211,21 +221,8 @@ export default function Home() {
               </div>
 
               {/* Remember Me & Forgot Password */}
-              <div className="flex flex-wrap justify-between items-center text-sm">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="checkbox"
-                    className="h-5 w-5 text-[#005585] border-gray-300 border-4 rounded focus:ring-[#005585]"
-                  />
-                  <label
-                    htmlFor="checkbox"
-                    className="text-[#313131] font-medium"
-                  >
-                    Remember Me
-                  </label>
-                </div>
-                <p className="text-[#FF8682] cursor-pointer">
+              <div className="flex flex-wrap justify-center items-center text-sm">
+                <p className="text-[#FF8682] cursor-pointer" onClick={()=>setIsOpen(true)}>
                   Forgot Password?
                 </p>
               </div>
@@ -234,7 +231,7 @@ export default function Home() {
                 className="w-full bg-[#005585] text-lg text-white py-2.5 rounded-lg cursor-pointer"
                 onClick={handleLogin}
               >
-                Login
+                {loading ? "Logging in..." : "Login"}
               </button>
             </div>
           </div>
@@ -263,7 +260,7 @@ export default function Home() {
         </div>
       )}
 
-      <Login isOpen={isOpen} onClose={() => setIsOpen(false)} />
+      <PasswordReset isOpen={isOpen} onClose={() => setIsOpen(false)} />
     </>
   );
 }

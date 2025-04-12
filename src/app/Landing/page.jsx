@@ -43,6 +43,16 @@ const page = () => {
   const { width, height } = useWindowSize();
 
   const [selected, setSelected] = useState("home");
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [groupedScores, setGroupedScores] = useState({});
+  const [userData, setUserData] = useState(null);
+  // This will be passed to HomeDashboard
+  const handleGoToReport = (patient, scores, userData) => {
+    setSelectedPatient(patient);
+    setGroupedScores(scores);
+    setUserData(userData);
+    setSelected("report");
+  };
 
   const handleSelect = (index) => {
     setSelected(index);
@@ -53,9 +63,15 @@ const page = () => {
   const renderSelectedComponent = () => {
     switch (selected) {
       case "home":
-        return <HomeDashboard goToReport={() => setSelected("report")}/>;
+        return <HomeDashboard goToReport={handleGoToReport} />;
       case "report":
-        return <Patientreport />;
+        return (
+          <Patientreport
+            patient={selectedPatient}
+            scoreGroups={groupedScores}
+            userData={userData} // Pass userData to Patientreport
+          />
+        );
       default:
         return null;
     }
@@ -109,7 +125,6 @@ const page = () => {
                 ? "bg-white/40 backdrop-blur-md shadow-lg border border-white/30"
                 : "opacity-100"
             }`}
-            
           >
             <svg
               width="31"
@@ -144,7 +159,6 @@ const page = () => {
                 ? "bg-white/40 backdrop-blur-md shadow-lg border border-white/30"
                 : "opacity-100"
             }`}
-            
           >
             <svg
               width="33"
@@ -179,7 +193,6 @@ const page = () => {
                 ? "bg-white/40 backdrop-blur-md shadow-lg border border-white/30"
                 : "opacity-100"
             }`}
-           
           >
             <svg
               width="31"

@@ -8,6 +8,7 @@ import { Poppins } from "next/font/google";
 
 import Firstimepassreset from "@/app/Firsttimepasswordreset/page.jsx";
 
+
 import ProfileImage from "@/app/assets/profile.png";
 import { UserIcon } from "@heroicons/react/24/outline";
 import { ChevronRightIcon, ArrowUpRightIcon } from "@heroicons/react/16/solid";
@@ -57,37 +58,136 @@ const page = ({ goToReport }) => {
     setSelected(index);
   };
   const [userData, setUserData] = useState(null);
+
+
   useEffect(() => {
     if (typeof window !== "undefined") {
-    const storedUser = localStorage.getItem("userData");
-    if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      console.log("Retrieved user from localStorage:", parsedUser);
+      const storedUser = localStorage.getItem("userData");
 
-      if(parsedUser.user.password === "doctor@123"){
-        setpassopen(true);
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        console.log("Retrieved user from localStorage:", parsedUser);
+
+        if(parsedUser.password === "doctor@123"){
+          setpassopen(true);
+        }
+  
+
+        // Attempt to log in again using the stored credentials
+        const loginWithStoredUser = async () => {
+          try {
+            const response = await axios.post(
+              "https://promapi.onrender.com/login",
+              {
+                identifier: parsedUser.identifier,
+                password: parsedUser.password,
+                role: parsedUser.role, // Assuming role is stored and needed
+              }
+            );
+
+            // Handle successful login response
+            localStorage.setItem(
+              "userData",
+              JSON.stringify({
+                identifier: parsedUser.identifier,
+                password: parsedUser.password,
+                role: parsedUser.role,
+              })
+
+            );
+
+            setUserData(response.data); // Store the full response data (e.g., tokens)
+            localStorage.setItem("uhid",response.data.user.uhid);
+            console.log(
+              "Successfully logged in with stored credentials",
+              response.data.user.uhid
+            );
+          } catch (error) {
+            console.error("Login failed with stored credentials", error);
+            alert("Login failed. Please check your credentials.");
+          }
+        };
+
+        // Call login function
+        loginWithStoredUser();
       }
-
-      setUserData(parsedUser);
-
     }
-  }
   }, []);
 
   const [patients, setPatients] = useState([]);
   const lastTapRef = useRef({});
+  const [preOpCount, setPreOpCount] = useState(0);
+  const [postOpStages, setPostOpStages] = useState({});
+  const [postOpTotal, setPostOpTotal] = useState(0);
+  const [scoreGroups, setScoreGroups] = useState({});
 
   useEffect(() => {
     const fetchPatients = async () => {
       if (!userData?.user?.email) return;
+
       try {
         const res = await axios.get(
-          `https://promapi.onrender.com/patients/by-doctor/${userData?.user?.email}`
+          `https://promapi.onrender.com/patients/by-doctor/${userData.user.email}`
         );
         const data = res.data;
 
-        // Optional: Add any transformation or filtering logic here if needed
         setPatients(data);
+
+        const preOp = data.filter((patient) =>
+          patient.questionnaire_assigned?.some(
+            (q) => q.period?.toLowerCase() === "pre op"
+          )
+        ).length;
+        setPreOpCount(preOp);
+
+        const stageCounts = {
+          "3W": 0,
+          "6W": 0,
+          "3M": 0,
+          "6M": 0,
+          "1Y": 0,
+          "2Y": 0,
+        };
+
+        data.forEach((patient) => {
+          const status = patient.current_status?.toUpperCase();
+          if (stageCounts.hasOwnProperty(status)) {
+            stageCounts[status]++;
+          }
+        });
+
+        setPostOpStages(stageCounts);
+        setPostOpTotal(
+          Object.values(stageCounts).reduce((sum, val) => sum + val, 0)
+        );
+
+        // 🔽 Grouping Scores Logic
+        const scoreGroups = {};
+        data.forEach((patient) => {
+          patient.questionnaire_scores?.forEach((q1) => {
+            const key = `${q1.name}|${q1.period}`;
+            if (!scoreGroups[key]) scoreGroups[key] = [];
+
+            data.forEach((otherPatient) => {
+              otherPatient.questionnaire_scores?.forEach((q2) => {
+                if (q2.name.includes(q1.name) && q2.period === q1.period) {
+                  const scoreString = q2.score?.join(",") || "";
+                  if (scoreString) scoreGroups[key].push(scoreString);
+                }
+              });
+            });
+          });
+        });
+
+        // Remove duplicates
+        for (const key in scoreGroups) {
+          scoreGroups[key] = Array.from(new Set(scoreGroups[key]));
+        }
+
+        console.log("Grouped Scores (name|period):", scoreGroups);
+
+        // ✅ Store in state
+        setScoreGroups(scoreGroups);
       } catch (err) {
         console.error("Failed to fetch patients", err);
       }
@@ -160,19 +260,6 @@ const page = ({ goToReport }) => {
     return false;
   });
 
-  // Load selected option from localStorage or default to "ALL"
-
-  const patientData = [
-    { name: "Bennett", surgeryStatus: "6W", completed: 5, pending: 2 },
-    { name: "Sophia", surgeryStatus: "3M", completed: 8, pending: 0 },
-    { name: "Liam", surgeryStatus: "6M", completed: 12, pending: 3 },
-    { name: "Olivia", surgeryStatus: "1Y", completed: 20, pending: 4 },
-    { name: "Noah", surgeryStatus: "2Y", completed: 15, pending: 0 },
-    { name: "Emma", surgeryStatus: "6W", completed: 9, pending: 0 },
-    { name: "Mason", surgeryStatus: "3M", completed: 7, pending: 0 },
-    { name: "Ava", surgeryStatus: "1Y", completed: 11, pending: 3 },
-  ];
-
   const [patprogressfilter, setpatprogressFilter] = useState("ALL");
 
   const patprogressoptions = ["ALL", "PRE OP", "POST OP"];
@@ -207,6 +294,17 @@ const page = ({ goToReport }) => {
       }
     }
   };
+
+  const displayedPatients = patients.filter((patient) => {
+    const status = patient.current_status?.toLowerCase() || "";
+    const selectedFilter = patprogressfilter.toLowerCase();
+
+    if (selectedFilter === "all") return true;
+    if (selectedFilter === "pre op") return status.includes("pre");
+    if (selectedFilter === "post op") return !status.includes("pre");
+
+    return false;
+  });
 
   return (
     <>
@@ -561,7 +659,7 @@ const page = ({ goToReport }) => {
                         score.name
                           ?.toLowerCase()
                           .includes(scorefilter.toLowerCase())
-                      )?.score ?? "N/A"}
+                      )?.score?.[0] ?? "N/A"}
                     </div>
                   </div>
 
@@ -578,7 +676,7 @@ const page = ({ goToReport }) => {
                           ? "w-full justify-center"
                           : ""
                       }`}
-                      onClick={goToReport}
+                      onClick={() => goToReport(patient, scoreGroups, userData)}
                     >
                       <div className="text-sm font-medium border-b-2 text-[#476367] border-blue-gray-500 cursor-pointer">
                         Report
@@ -644,7 +742,7 @@ const page = ({ goToReport }) => {
                   width < 1060 && width >= 1000 ? "text-3xl" : "text-4xl"
                 }`}
               >
-                53
+                {preOpCount}
               </p>
             </div>
 
@@ -675,7 +773,7 @@ const page = ({ goToReport }) => {
                   width < 1060 && width >= 1000 ? "text-3xl" : "text-4xl"
                 }`}
               >
-                53
+                {postOpTotal}
               </p>
             </div>
           </div>
@@ -722,25 +820,26 @@ const page = ({ goToReport }) => {
               {width >= 1272 && (
                 <div className="w-full h-[90%] flex flex-row justify-start gap-2">
                   <div className="justify-start grid grid-cols-2  w-5/6 h-full overflow-y-scroll flex-grow ">
-                    {patientData.map((item, index) => (
+                    {displayedPatients.map((item, index) => (
                       <div
                         key={index}
-                        onClick={() => setIsOpenrem(true)}
                         className={`w-[100px] h-37 bg-white shadow-md rounded-xl p-2.5 m-2 relative flex flex-col justify-between 
-                              ${
-                                item.pending > 0
-                                  ? "shadow-lg shadow-red-500 "
-                                  : "shadow-md shadow-gray-300"
-                              }`}
+                          ${
+                            item.questionnaire_assigned?.filter(
+                              (q) => q.completed === 0
+                            ).length > 0
+                              ? "shadow-lg shadow-red-500"
+                              : "shadow-md shadow-gray-300"
+                          }`}
                       >
                         {/* Patient Name */}
                         <p className="text-[#475467] text-base font-medium text-center mt-3">
-                          {item.name}
+                          {item.first_name + " " + item.last_name}
                         </p>
 
                         {/* Status */}
                         <p className="text-gray-400 text-sm font-medium text-center">
-                          {item.surgeryStatus}
+                          {item.current_status}
                         </p>
 
                         {/* Completed */}
@@ -749,7 +848,9 @@ const page = ({ goToReport }) => {
                             COMPLETED
                           </p>
                           <p className="text-green-500 text-sm font-bold">
-                            {item.completed}
+                            {item.questionnaire_assigned?.filter(
+                              (q) => q.completed === 1
+                            ).length || 0}
                           </p>
                         </div>
 
@@ -759,7 +860,9 @@ const page = ({ goToReport }) => {
                             PENDING
                           </p>
                           <p className="text-orange-400 text-sm font-bold">
-                            {item.pending}
+                            {item.questionnaire_assigned?.filter(
+                              (q) => q.completed === 0
+                            ).length || 0}
                           </p>
                         </div>
                       </div>
@@ -806,14 +909,13 @@ const page = ({ goToReport }) => {
                   </div>
 
                   <div className="justify-center grid grid-cols-2  w-full h-full overflow-y-scroll flex-grow ">
-                    {patientData.map((item, index) => (
+                    {displayedPatients.map((item, index) => (
                       <div
                         key={index}
-                        onClick={() => setIsOpenrem(true)}
                         className={`w-[100px] h-37 bg-white shadow-md rounded-xl p-2.5 m-1 relative flex flex-col justify-between 
                               ${
                                 item.pending > 0
-                                  ? "shadow-lg shadow-red-500 cursor-pointer"
+                                  ? "shadow-lg shadow-red-500"
                                   : "shadow-md shadow-gray-300"
                               }`}
                       >
@@ -827,12 +929,12 @@ const page = ({ goToReport }) => {
 
                         {/* Patient Name */}
                         <p className="text-[#475467] text-base font-medium text-center mt-3">
-                          {item.name}
+                          {item.first_name + " " + item.last_name}
                         </p>
 
                         {/* Status */}
                         <p className="text-gray-400 text-sm font-medium text-center">
-                          {item.surgeryStatus}
+                          {item.current_status}
                         </p>
 
                         {/* Completed */}
@@ -841,7 +943,9 @@ const page = ({ goToReport }) => {
                             COMPLETED
                           </p>
                           <p className="text-green-500 text-sm font-bold">
-                            {item.completed}
+                            {item.questionnaire_assigned?.filter(
+                              (q) => q.completed === 1
+                            ).length || 0}
                           </p>
                         </div>
 
@@ -851,7 +955,9 @@ const page = ({ goToReport }) => {
                             PENDING
                           </p>
                           <p className="text-orange-400 text-sm font-bold">
-                            {item.pending}
+                            {item.questionnaire_assigned?.filter(
+                              (q) => q.completed === 0
+                            ).length || 0}
                           </p>
                         </div>
                       </div>
@@ -880,16 +986,15 @@ const page = ({ goToReport }) => {
                   </div>
 
                   <div className="flex flex-row overflow-x-scroll w-full h-full p-2 space-x-5">
-                    {patientData.map((item, index) => (
+                    {displayedPatients.map((item, index) => (
                       <div
                         key={index}
-                        onClick={() => setIsOpenrem(true)}
                         className={`min-w-[140px] bg-white shadow-md rounded-xl p-2.5 relative flex flex-col justify-between 
-        ${
-          item.pending > 0
-            ? "shadow-lg shadow-red-500 cursor-pointer"
-            : "shadow-md shadow-gray-300"
-        }`}
+                        ${
+                          item.pending > 0
+                            ? "shadow-lg shadow-red-500"
+                            : "shadow-md shadow-gray-300"
+                        }`}
                       >
                         {/* Top Right Arrow Icon */}
                         {item.pending > 0 && (
@@ -901,12 +1006,12 @@ const page = ({ goToReport }) => {
 
                         {/* Patient Name */}
                         <p className="text-[#475467] text-base font-medium text-center mt-3">
-                          {item.name}
+                          {item.first_name + " " + item.last_name}
                         </p>
 
                         {/* Status */}
                         <p className="text-gray-400 text-sm font-medium text-center">
-                          {item.surgeryStatus}
+                          {item.current_status}
                         </p>
 
                         {/* Completed */}
@@ -915,7 +1020,9 @@ const page = ({ goToReport }) => {
                             COMPLETED
                           </p>
                           <p className="text-green-500 text-sm font-bold">
-                            {item.completed}
+                            {item.questionnaire_assigned?.filter(
+                              (q) => q.completed === 1
+                            ).length || 0}
                           </p>
                         </div>
 
@@ -925,7 +1032,9 @@ const page = ({ goToReport }) => {
                             PENDING
                           </p>
                           <p className="text-orange-400 text-sm font-bold">
-                            {item.pending}
+                            {item.questionnaire_assigned?.filter(
+                              (q) => q.completed === 0
+                            ).length || 0}
                           </p>
                         </div>
                       </div>
@@ -939,6 +1048,7 @@ const page = ({ goToReport }) => {
       </div>
 
       <Firstimepassreset passopen={passopen} onClose={() => setpassopen(false)}/>
+
     </>
   );
 };
