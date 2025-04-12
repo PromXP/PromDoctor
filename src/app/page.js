@@ -144,29 +144,7 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Alternative Login */}
-            <div className="w-full max-w-lg flex flex-col items-center gap-4">
-              <div className="flex items-center gap-2 w-full justify-center opacity-50 text-sm md:text-base whitespace-nowrap">
-                <div className="w-1/3 h-[0.5px] bg-[#313131]"></div>
-                <p className="text-[#313131] px-2">Or login with</p>
-                <div className="w-1/3 h-[0.5px] bg-[#313131]"></div>
-              </div>
-
-              <div className="border-[#005585] border-[1.8px] p-2 rounded-lg cursor-pointer">
-                <svg
-                  width="35"
-                  height="35"
-                  viewBox="0 0 10 10"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M8.90368 4.11288H8.59089V4.09676H5.09605V5.65003H7.29062C6.97045 6.55422 6.11014 7.20329 5.09605 7.20329C3.80937 7.20329 2.76615 6.16008 2.76615 4.87339C2.76615 3.58671 3.80937 2.5435 5.09605 2.5435C5.68998 2.5435 6.23032 2.76756 6.64174 3.13354L7.74009 2.03519C7.04656 1.38884 6.11887 0.990234 5.09605 0.990234C2.95158 0.990234 1.21289 2.72892 1.21289 4.87339C1.21289 7.01787 2.95158 8.75655 5.09605 8.75655C7.24053 8.75655 8.97921 7.01787 8.97921 4.87339C8.97921 4.61303 8.95242 4.35888 8.90368 4.11288Z"
-                    fill="#FFC107"
-                  />
-                </svg>
-              </div>
-            </div>
+           
           </div>
 
           {/* Right Section - Image*/}
@@ -259,29 +237,7 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Alternative Login */}
-            <div className="w-full max-w-lg flex flex-col items-center gap-4">
-              <div className="flex items-center gap-2 w-full justify-center opacity-50 text-sm md:text-base whitespace-nowrap">
-                <div className="w-1/3 h-[0.5px] bg-[#313131]"></div>
-                <p className="text-[#313131] px-2">Or login with</p>
-                <div className="w-1/3 h-[0.5px] bg-[#313131]"></div>
-              </div>
-
-              <div className="border-[#005585] border-[1.8px] p-2 rounded-lg cursor-pointer">
-                <svg
-                  width="35"
-                  height="35"
-                  viewBox="0 0 10 10"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M8.90368 4.11288H8.59089V4.09676H5.09605V5.65003H7.29062C6.97045 6.55422 6.11014 7.20329 5.09605 7.20329C3.80937 7.20329 2.76615 6.16008 2.76615 4.87339C2.76615 3.58671 3.80937 2.5435 5.09605 2.5435C5.68998 2.5435 6.23032 2.76756 6.64174 3.13354L7.74009 2.03519C7.04656 1.38884 6.11887 0.990234 5.09605 0.990234C2.95158 0.990234 1.21289 2.72892 1.21289 4.87339C1.21289 7.01787 2.95158 8.75655 5.09605 8.75655C7.24053 8.75655 8.97921 7.01787 8.97921 4.87339C8.97921 4.61303 8.95242 4.35888 8.90368 4.11288Z"
-                    fill="#FFC107"
-                  />
-                </svg>
-              </div>
-            </div>
+            
           </div>
 
           {/* Right Section - Image*/}
