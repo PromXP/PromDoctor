@@ -387,13 +387,22 @@ const page = ({ patient, scoreGroups, userData }) => {
   const databox = useBoxPlot(
     (boxPlotData ?? []).map((item, index) => {
       const stats = computeBoxStats(item.boxData, item.dotValue);
+  
+      const isValidDot = stats.average !== undefined && !isNaN(stats.average) && stats.average < 100;
+  
+      if (!isValidDot) {
+        stats.average = undefined; // strip rogue dot
+      }
+  
       return {
         name: item.name,
-        x: index * 10, // Adjust x spacing if needed
+        x: index * 10,
         ...stats,
       };
     })
   );
+  
+  
 
   // SF-12 data processing
   const sf12BoxPlotData = useMemo(() => {
@@ -534,16 +543,35 @@ const page = ({ patient, scoreGroups, userData }) => {
       });
   }, [scoreGroups, patient]);
 
+  const allLabels = [
+    "PREOP", "3 WEEKS", "6 WEEKS", "3 MONTHS", "6 MONTHS", "1 YEAR", "2 YEARS"
+  ];
+  
   const fjsDatabox = useBoxPlot(
-    (fjsBoxPlotData ?? []).map((item, index) => {
-      const stats = computeBoxStats(item.boxData, item.dotValue);
+    (allLabels.map((label, index) => {
+      // Check if data for the label exists
+      const item = fjsBoxPlotData.find(data => data.name === label);
+  
+      // If no data is found for that label, use a default value (e.g., null or empty data)
+      const stats = item ? computeBoxStats(item.boxData, item.dotValue) : {
+        min: null,
+        bottomWhisker: null,
+        bottomBox: null,
+        topBox: null,
+        topWhisker: null,
+        median: null,
+        max: null,
+        average: null
+      };
+  
       return {
-        name: item.name,
-        x: index * 10,
+        name: label,
+        x: index * 10,  // or some other index-based calculation
         ...stats,
       };
-    })
+    }))
   );
+  
 
   const isPostSurgeryDetailsFilled = (details) => {
     if (!details) return false;
@@ -889,14 +917,19 @@ const page = ({ patient, scoreGroups, userData }) => {
                       key={key}
                       type="monotone"
                       dataKey={key}
-                      connectNulls={true}
+                      connectNulls={true} // Continue connecting lines even when there's no data
                       name={labels[key]}
                       stroke={colors[i]}
                       strokeWidth={2}
-                      dot={({ cx, cy, payload, index }) =>
-                        payload.name === "SURGERY" ? null : (
+                      dot={({ cx, cy, payload, index }) => {
+                        // Check if the value exists before rendering the dot
+                        if (payload[key] == null || payload[key] === 0) {
+                          return null; // Don't render the dot if there's no data
+                        }
+
+                        return (
                           <circle
-                            key={`dot-${index}`} // 👈 unique key here
+                            key={`dot-${index}`} // Ensure unique key
                             cx={cx}
                             cy={cy}
                             r={3}
@@ -904,18 +937,23 @@ const page = ({ patient, scoreGroups, userData }) => {
                             strokeWidth={1}
                             fill={colors[i]}
                           />
-                        )
-                      }
-                      activeDot={({ payload }) =>
-                        payload.name === "SURGERY" ? null : (
+                        );
+                      }}
+                      activeDot={({ payload }) => {
+                        // Only show active dot if there's data
+                        if (payload[key] == null || payload[key] === 0) {
+                          return null; // Don't render active dot if there's no data
+                        }
+
+                        return (
                           <circle
                             r={6}
                             stroke="black"
                             strokeWidth={2}
                             fill="white"
                           />
-                        )
-                      }
+                        );
+                      }}
                     />
                   );
                 })}
@@ -992,7 +1030,7 @@ const page = ({ patient, scoreGroups, userData }) => {
                   content={() => {
                     const labels = {
                       pcs: "Physical Component Summary (PCS)",
-                      mcs: "Mental Component Summary (PCS)",
+                      mcs: "Mental Component Summary (MCS)",
                     };
 
                     const colors = {
@@ -1057,7 +1095,14 @@ const page = ({ patient, scoreGroups, userData }) => {
                   }}
                 />
 
-                <Scatter name="Physical (PCS)" data={dataPCS} fill="red">
+                {/* Physical Component Summary (PCS) Scatter */}
+                <Scatter
+                  name="Physical (PCS)"
+                  data={dataPCS.filter(
+                    (point) => point.y != null && point.x != null
+                  )} // Filter out invalid data
+                  fill="red"
+                >
                   <ErrorBar
                     dataKey="error"
                     direction="y"
@@ -1066,7 +1111,14 @@ const page = ({ patient, scoreGroups, userData }) => {
                   />
                 </Scatter>
 
-                <Scatter name="Mental (MCS)" data={dataMCS} fill="red">
+                {/* Mental Component Summary (MCS) Scatter */}
+                <Scatter
+                  name="Mental (MCS)"
+                  data={dataMCS.filter(
+                    (point) => point.y != null && point.x != null
+                  )} // Filter out invalid data
+                  fill="red"
+                >
                   <ErrorBar
                     dataKey="error"
                     direction="y"
@@ -1094,7 +1146,13 @@ const page = ({ patient, scoreGroups, userData }) => {
             <p className="font-bold text-sm text-black">OXFORD KNEE SCORE </p>
             <ResponsiveContainer width="100%" height="90%">
               <ComposedChart
-                data={databox}
+                data={databox.filter(
+                  (item) =>
+                    item.min !== undefined &&
+                    item._median !== undefined &&
+                    item._min !== undefined &&
+                    item._max !== undefined
+                )} // Filter out undefined data
                 barCategoryGap="70%"
                 margin={{ top: 20, bottom: 20, left: 0, right: 20 }}
               >
@@ -1213,14 +1271,14 @@ const page = ({ patient, scoreGroups, userData }) => {
 
                 {/* Median Line */}
                 <Scatter
-                  data={databox}
+                  data={databox.filter((item) => item._median !== undefined)} // Ensure valid data
                   shape={(props) => <HorizonBar {...props} dataKey="_median" />}
                   dataKey="_median"
                 />
 
                 {/* Min Line */}
                 <Scatter
-                  data={databox}
+                  data={databox.filter((item) => item._min !== undefined)} // Ensure valid data
                   shape={(props) => (
                     <HorizonBar {...props} dataKey="_min" stroke="#4A3AFF" />
                   )}
@@ -1229,26 +1287,34 @@ const page = ({ patient, scoreGroups, userData }) => {
 
                 {/* Max Line */}
                 <Scatter
-                  data={databox}
+                  data={databox.filter((item) => item._max !== undefined)} // Ensure valid data
                   shape={(props) => <HorizonBar {...props} dataKey="_max" />}
                   dataKey="_max"
                 />
 
                 <ZAxis type="number" dataKey="size" range={[0, 250]} />
                 <Scatter
-                  dataKey="average"
-                  fill="#04CE00"
-                  stroke="#04CE00"
-                  shape={(props) => (
-                    <circle
-                      cx={props.cx}
-                      cy={props.cy}
-                      r={4}
-                      fill="#04CE00"
-                      stroke="#FFF"
-                    />
-                  )}
-                />
+  data={databox.filter(
+    (item) =>
+      item.average !== undefined &&
+      item.average !== null &&
+      !isNaN(item.average) &&
+      item.average < 100 // optional: clamp to realistic max
+  )}
+  dataKey="average"
+  fill="#04CE00"
+  stroke="#04CE00"
+  shape={(props) => (
+    <circle
+      cx={props.cx}
+      cy={props.cy}
+      r={4}
+      fill="#04CE00"
+      stroke="#FFF"
+    />
+  )}
+/>
+
                 <XAxis
                   dataKey="name"
                   type="category"
@@ -1431,19 +1497,27 @@ const page = ({ patient, scoreGroups, userData }) => {
 
                 <ZAxis type="number" dataKey="size" range={[0, 250]} />
                 <Scatter
-                  dataKey="average"
-                  fill="#04CE00"
-                  stroke="#04CE00"
-                  shape={(props) => (
-                    <circle
-                      cx={props.cx}
-                      cy={props.cy}
-                      r={4}
-                      fill="#04CE00"
-                      stroke="#FFF"
-                    />
-                  )}
-                />
+  data={databox.filter(
+    (item) =>
+      item.average !== undefined &&
+      item.average !== null &&
+      !isNaN(item.average) &&
+      item.average < 100 // Optional: clamp to a reasonable max, adjust as needed
+  )}
+  dataKey="average"
+  fill="#04CE00"
+  stroke="#04CE00"
+  shape={(props) => (
+    <circle
+      cx={props.cx}
+      cy={props.cy}
+      r={4}
+      fill="#04CE00"
+      stroke="#FFF"
+    />
+  )}
+/>
+
                 <XAxis
                   dataKey="name"
                   type="category"
@@ -1638,19 +1712,27 @@ const page = ({ patient, scoreGroups, userData }) => {
 
                 <ZAxis type="number" dataKey="size" range={[0, 250]} />
                 <Scatter
-                  dataKey="average"
-                  fill="#04CE00"
-                  stroke="#04CE00"
-                  shape={(props) => (
-                    <circle
-                      cx={props.cx}
-                      cy={props.cy}
-                      r={4}
-                      fill="#04CE00"
-                      stroke="#FFF"
-                    />
-                  )}
-                />
+  data={databox.filter(
+    (item) =>
+      item.average !== undefined &&
+      item.average !== null &&
+      !isNaN(item.average) &&
+      item.average < 100 // Optional: clamp to a reasonable max, adjust as needed
+  )}
+  dataKey="average"
+  fill="#04CE00"
+  stroke="#04CE00"
+  shape={(props) => (
+    <circle
+      cx={props.cx}
+      cy={props.cy}
+      r={4}
+      fill="#04CE00"
+      stroke="#FFF"
+    />
+  )}
+/>
+
                 <XAxis
                   dataKey="name"
                   type="category"
@@ -1664,23 +1746,25 @@ const page = ({ patient, scoreGroups, userData }) => {
                   tickLine={{ stroke: "#615E83" }}
                 />
 
-                <YAxis
-                  label={{
-                    value: "SCORE",
-                    angle: -90,
-                    position: "insideLeft",
-                    offset: 20,
-                    style: {
-                      textAnchor: "middle",
-                      fill: "#615E83",
-                      fontSize: 14,
-                      fontWeight: "bold",
-                    },
-                  }}
-                  tick={{ fill: "#615E83", fontSize: 16, fontWeight: "500" }}
-                  axisLine={{ stroke: "#615E83" }}
-                  tickLine={{ stroke: "#615E83" }}
-                />
+<YAxis
+  label={{
+    value: "SCORE",
+    angle: -90,
+    position: "insideLeft",
+    offset: 20,
+    style: {
+      textAnchor: "middle",
+      fill: "#615E83",
+      fontSize: 14,
+      fontWeight: "bold",
+    },
+  }}
+  tick={{ fill: "#615E83", fontSize: 16, fontWeight: "500" }}
+  axisLine={{ stroke: "#615E83" }}
+  tickLine={{ stroke: "#615E83" }}
+  domain={[0, 100]}  // Set domain to match your data range
+/>
+
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -1836,19 +1920,27 @@ const page = ({ patient, scoreGroups, userData }) => {
 
                 <ZAxis type="number" dataKey="size" range={[0, 250]} />
                 <Scatter
-                  dataKey="average"
-                  fill="#04CE00"
-                  stroke="#04CE00"
-                  shape={(props) => (
-                    <circle
-                      cx={props.cx}
-                      cy={props.cy}
-                      r={4}
-                      fill="#04CE00"
-                      stroke="#FFF"
-                    />
-                  )}
-                />
+  data={databox.filter(
+    (item) =>
+      item.average !== undefined &&
+      item.average !== null &&
+      !isNaN(item.average) &&
+      item.average < 100 // Optional: clamp to a reasonable max, adjust as needed
+  )}
+  dataKey="average"
+  fill="#04CE00"
+  stroke="#04CE00"
+  shape={(props) => (
+    <circle
+      cx={props.cx}
+      cy={props.cy}
+      r={4}
+      fill="#04CE00"
+      stroke="#FFF"
+    />
+  )}
+/>
+
                 <XAxis
                   dataKey="name"
                   type="category"
@@ -1862,23 +1954,25 @@ const page = ({ patient, scoreGroups, userData }) => {
                   tickLine={{ stroke: "#615E83" }}
                 />
 
-                <YAxis
-                  label={{
-                    value: "SCORE",
-                    angle: -90,
-                    position: "insideLeft",
-                    offset: 20,
-                    style: {
-                      textAnchor: "middle",
-                      fill: "#615E83",
-                      fontSize: 14,
-                      fontWeight: "bold",
-                    },
-                  }}
-                  tick={{ fill: "#615E83", fontSize: 16, fontWeight: "500" }}
-                  axisLine={{ stroke: "#615E83" }}
-                  tickLine={{ stroke: "#615E83" }}
-                />
+<YAxis
+  label={{
+    value: "SCORE",
+    angle: -90,
+    position: "insideLeft",
+    offset: 20,
+    style: {
+      textAnchor: "middle",
+      fill: "#615E83",
+      fontSize: 14,
+      fontWeight: "bold",
+    },
+  }}
+  tick={{ fill: "#615E83", fontSize: 16, fontWeight: "500" }}
+  axisLine={{ stroke: "#615E83" }}
+  tickLine={{ stroke: "#615E83" }}
+  domain={[0, 100]}  // Set domain to match your data range
+/>
+
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -1908,48 +2002,48 @@ const page = ({ patient, scoreGroups, userData }) => {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
 
                 <Tooltip
-                  content={({ active, payload, label }) => {
-                    if (!active || !payload || !Array.isArray(payload))
-                      return null;
+  content={({ active, payload, label }) => {
+    if (!active || !payload || !Array.isArray(payload)) return null;
 
-                    const safeLabel =
-                      typeof label === "number" || typeof label === "string"
-                        ? label
-                        : "Unknown";
+    const safeLabel =
+      typeof label === "number" || typeof label === "string"
+        ? label
+        : "Unknown";
 
-                    return (
-                      <div
-                        style={{
-                          background: "#fff",
-                          padding: "8px",
-                          border: "1px solid #ccc",
-                        }}
-                      >
-                        <p
-                          style={{ fontWeight: "bold", margin: 0 }}
-                        >{`Day: ${safeLabel}`}</p>
-                        {payload.map((entry, index) => {
-                          const value = entry?.value;
-                          return (
-                            <p
-                              key={index}
-                              style={{
-                                margin: 0,
-                                color: entry?.color ?? "#000",
-                              }}
-                            >
-                              {entry.name}:{" "}
-                              {typeof value === "number"
-                                ? value.toFixed(2)
-                                : "N/A"}
-                            </p>
-                          );
-                        })}
-                      </div>
-                    );
-                  }}
-                  cursor={{ fill: "rgba(97, 94, 131, 0.1)" }}
-                />
+    return (
+      <div
+        style={{
+          background: "#fff",
+          padding: "8px",
+          border: "1px solid #ccc",
+        }}
+      >
+        <p
+          style={{ fontWeight: "bold", margin: 0 }}
+        >{`Day: ${safeLabel}`}</p>
+        {payload.map((entry, index) => {
+          const value = entry?.value;
+          return (
+            <p
+              key={index}
+              style={{
+                margin: 0,
+                color: entry?.color ?? "#000",
+              }}
+            >
+              {entry.name}:{" "}
+              {value !== null && typeof value === "number"
+                ? value.toFixed(2)
+                : "No Data Available"}
+            </p>
+          );
+        })}
+      </div>
+    );
+  }}
+  cursor={{ fill: "rgba(97, 94, 131, 0.1)" }}
+/>
+
 
                 <Legend
                   verticalAlign="top"
@@ -2043,19 +2137,26 @@ const page = ({ patient, scoreGroups, userData }) => {
 
                 <ZAxis type="number" dataKey="size" range={[0, 250]} />
                 <Scatter
-                  dataKey="average"
-                  fill="#04CE00"
-                  stroke="#04CE00"
-                  shape={(props) => (
-                    <circle
-                      cx={props.cx}
-                      cy={props.cy}
-                      r={4}
-                      fill="#04CE00"
-                      stroke="#FFF"
-                    />
-                  )}
-                />
+  data={databox.filter(
+    (item) =>
+      item.average !== undefined &&
+      item.average !== null &&
+      !isNaN(item.average) &&
+      item.average < 100 // Optional: clamp to a reasonable max, adjust as needed
+  )}
+  dataKey="average"
+  fill="#04CE00"
+  stroke="#04CE00"
+  shape={(props) => (
+    <circle
+      cx={props.cx}
+      cy={props.cy}
+      r={4}
+      fill="#04CE00"
+      stroke="#FFF"
+    />
+  )}
+/>
                 <XAxis
                   dataKey="name"
                   type="category"
@@ -2069,23 +2170,25 @@ const page = ({ patient, scoreGroups, userData }) => {
                   tickLine={{ stroke: "#615E83" }}
                 />
 
-                <YAxis
-                  label={{
-                    value: "SCORE",
-                    angle: -90,
-                    position: "insideLeft",
-                    offset: 20,
-                    style: {
-                      textAnchor: "middle",
-                      fill: "#615E83",
-                      fontSize: 14,
-                      fontWeight: "bold",
-                    },
-                  }}
-                  tick={{ fill: "#615E83", fontSize: 16, fontWeight: "500" }}
-                  axisLine={{ stroke: "#615E83" }}
-                  tickLine={{ stroke: "#615E83" }}
-                />
+<YAxis
+  label={{
+    value: "SCORE",
+    angle: -90,
+    position: "insideLeft",
+    offset: 20,
+    style: {
+      textAnchor: "middle",
+      fill: "#615E83",
+      fontSize: 14,
+      fontWeight: "bold",
+    },
+  }}
+  tick={{ fill: "#615E83", fontSize: 16, fontWeight: "500" }}
+  axisLine={{ stroke: "#615E83" }}
+  tickLine={{ stroke: "#615E83" }}
+  domain={[0, 100]}  // Set domain to match your data range
+/>
+
               </ComposedChart>
             </ResponsiveContainer>
           </div>
