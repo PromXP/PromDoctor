@@ -291,15 +291,58 @@ const page = ({ goToReport }) => {
     }
   };
 
-  const displayedPatients = patients.filter((patient) => {
+  const convertToDateString = (utcDate) => {
+    const date = new Date(utcDate); // Parse the UTC date string into a Date object
+
+    // Get the date in YYYY-MM-DD format
+    const year = date.getUTCFullYear();
+    const month = (date.getUTCMonth() + 1).toString().padStart(2, "0"); // Months are 0-indexed, so add 1
+    const day = date.getUTCDate().toString().padStart(2, "0");
+
+    return `${year}-${month}-${day}`; // Return the date in the format "YYYY-MM-DD"
+  };
+
+  const isSameDay = (d1, d2) => {
+    const date1 = new Date(d1);
+    const date2 = new Date(d2);
+    return (
+      date1.getFullYear() === date2.getFullYear() &&
+      date1.getMonth() === date2.getMonth() &&
+      date1.getDate() === date2.getDate()
+    );
+  };
+
+  const displayedPatients = [];
+
+  patients.forEach((patient) => {
     const status = patient.current_status?.toLowerCase() || "";
     const selectedFilter = patprogressfilter.toLowerCase();
 
-    if (selectedFilter === "all") return true;
-    if (selectedFilter === "pre op") return status.includes("pre");
-    if (selectedFilter === "post op") return !status.includes("pre");
+    const statusMatch =
+      selectedFilter === "all" ||
+      (selectedFilter === "pre op" && status.includes("pre")) ||
+      (selectedFilter === "post op" && !status.includes("pre"));
 
-    return false;
+    if (!statusMatch) return;
+
+    // Go through each questionnaire for this patient
+    patient.questionnaire_assigned?.forEach((q) => {
+      // Convert the deadline from UTC to YYYY-MM-DD format
+      const deadlineInDateFormat = convertToDateString(q.deadline);
+
+      // Check if the selected date matches and if the questionnaire is incomplete
+      if (
+        (!selectedDate || isSameDay(deadlineInDateFormat, selectedDate)) && // Date match
+        q.completed === 0 // Only show incomplete questionnaires
+      ) {
+        // Push the same patient object with deadline info if needed
+        displayedPatients.push({
+          ...patient,
+          matched_deadline: deadlineInDateFormat, // Show the deadline in YYYY-MM-DD format
+          matched_questionnaire: q.name, // Optional: To track which questionnaire
+        });
+      }
+    });
   });
 
   return (

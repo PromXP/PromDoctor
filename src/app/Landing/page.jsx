@@ -195,7 +195,7 @@ const page = () => {
                 : "opacity-100"
             }`}
             onClick={()=>{
-              router.push("/");
+              router.replace("/");
               localStorage.removeItem("userData");
             }}
           >
