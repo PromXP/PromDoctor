@@ -121,7 +121,7 @@ const page = () => {
 
           {/* Button 2 */}
           <button
-            className={`cursor-pointer p-2 rounded-lg transition-all ${
+            className={`cursor-pointer p-2 rounded-lg transition-all invisible ${
               selected === 1
                 ? "bg-white/40 backdrop-blur-md shadow-lg border border-white/30"
                 : "opacity-100"
@@ -155,7 +155,7 @@ const page = () => {
 
           {/* Button 3 */}
           <button
-            className={`cursor-pointer p-2 rounded-lg transition-all ${
+            className={`cursor-pointer p-2 rounded-lg transition-all invisible ${
               selected === 2
                 ? "bg-white/40 backdrop-blur-md shadow-lg border border-white/30"
                 : "opacity-100"
