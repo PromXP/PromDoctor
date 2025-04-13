@@ -7,7 +7,7 @@ import Image from "next/image";
 import { Poppins } from "next/font/google";
 
 import Doc from "@/app/assets/logincover.png";
-import Docbg from "@/app/assets/doctorbg.png";
+import Docbg from "@/app/assets/logincoverbg.png";
 import Docbgsm from "@/app/assets/loginsmallbg.png";
 
 import PasswordReset from "@/app/PasswordReset/page.jsx";
