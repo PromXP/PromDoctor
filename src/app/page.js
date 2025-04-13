@@ -106,7 +106,7 @@ export default function Home() {
               <p className="font-bold text-3xl md:text-5xl text-black">
                 DOCTOR
               </p>
-              <p className="font-semibold text-2xl md:text-4xl text-[#005585]">
+              <p className="font-semibold text-2xl md:text-4xl text-[#7075DB]">
                 Login
               </p>
             </div>
@@ -145,7 +145,7 @@ export default function Home() {
               </div>
 
               <button
-                className="w-full bg-[#005585] text-lg text-white py-2.5 rounded-lg cursor-pointer"
+                className="w-full bg-[#7075DB] text-lg text-white py-2.5 rounded-lg cursor-pointer"
                 onClick={handleLogin}
               >
                 {loading ? "Logging in..." : "Login"}

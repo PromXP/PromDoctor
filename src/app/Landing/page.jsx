@@ -80,7 +80,7 @@ const page = () => {
 
   return (
     <div
-      className={`${poppins.className} flex h-screen bg-[#005585] py-1.5 pr-1.5`}
+      className={`${poppins.className} flex h-screen bg-[#7075DB] py-1.5 pr-1.5`}
     >
       <div className="w-[18%] sm:w-[12%] md:w-[10%] lg:w-[8%] xl:w-[7%] h-full flex justify-center items-center">
         <div className="w-full h-[65%] flex flex-col justify-center items-center gap-6 sm:gap-8 md:gap-10">
