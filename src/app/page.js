@@ -47,6 +47,7 @@ export default function Home() {
   const router = useRouter();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
 
@@ -114,32 +115,42 @@ export default function Home() {
             {/* Input Fields */}
             <div className="w-full max-w-lg flex flex-col gap-8">
               <div className="relative w-full">
-                <label className="absolute left-4 -top-2 bg-white px-1 text-[#005585] text-sm">
+                <label className="absolute left-4 -top-2 bg-white px-1 text-[#7075DB] text-sm">
                   Email / Phone / UHID
                 </label>
                 <input
                   type="text"
-                  className="w-full text-black py-3 px-4 border-[1.6px] border-[#79747E] rounded-sm text-lg focus:border-[#005585] outline-none"
+                  className="w-full text-black py-3 px-4 border-[1.6px] border-[#79747E] rounded-sm text-lg focus:border-[#7075DB] outline-none"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                 />
               </div>
 
               <div className="relative w-full">
-                <label className="absolute left-4 -top-2 bg-white px-1 text-[#005585] text-sm">
+                <label className="absolute left-4 -top-2 bg-white px-1 text-[#7075DB] text-sm">
                   Password
                 </label>
                 <input
-                  type="password"
-                  className="w-full text-black py-3 px-4 border-[1.6px] border-[#79747E] rounded-sm text-lg focus:border-[#005585] outline-none"
+                  type={showPassword ? "text" : "password"}
+                  className="w-full text-black py-3 px-4 border-[1.6px] border-[#79747E] rounded-sm text-lg focus:border-[#7075DB] outline-none"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
+                <button
+                  type="button"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-[#7075DB] focus:outline-none cursor-pointer"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
               </div>
 
               {/* Remember Me & Forgot Password */}
               <div className="flex flex-wrap justify-center items-center text-sm">
-                <p className="text-[#FF8682] cursor-pointer" onClick={()=>setIsOpen(true)}>
+                <p
+                  className="text-[#FF8682] cursor-pointer"
+                  onClick={() => setIsOpen(true)}
+                >
                   Forgot Password?
                 </p>
               </div>
@@ -189,7 +200,7 @@ export default function Home() {
               <p className="font-bold text-3xl md:text-5xl text-black">
                 DOCTOR
               </p>
-              <p className="font-semibold text-2xl md:text-4xl text-[#005585]">
+              <p className="font-semibold text-2xl md:text-4xl text-[#7075DB]">
                 Login
               </p>
             </div>
@@ -197,38 +208,49 @@ export default function Home() {
             {/* Input Fields */}
             <div className="w-full max-w-lg flex flex-col gap-8">
               <div className="relative w-full">
-                <label className="absolute left-4 -top-2 bg-white px-1 text-[#005585] text-sm">
+                <label className="absolute left-4 -top-2 bg-white px-1 text-[#7075DB] text-sm">
                   Email / Phone / UHID
                 </label>
                 <input
                   type="text"
-                  className="w-full text-black py-3 px-4 border-[1.6px] border-[#79747E] rounded-sm text-lg focus:border-[#005585] outline-none"
+                  className="w-full text-black py-3 px-4 border-[1.6px] border-[#79747E] rounded-sm text-lg focus:border-[#7075DB] outline-none"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                 />
               </div>
 
               <div className="relative w-full">
-                <label className="absolute left-4 -top-2 bg-white px-1 text-[#005585] text-sm">
+                <label className="absolute left-4 -top-2 bg-white px-1 text-[#7075DB] text-sm">
                   Password
                 </label>
+
                 <input
-                  type="password"
-                  className="w-full text-black py-3 px-4 border-[1.6px] border-[#79747E] rounded-sm text-lg focus:border-[#005585] outline-none"
+                  type={showPassword ? "text" : "password"}
+                  className="w-full text-black py-3 px-4 border-[1.6px] border-[#79747E] rounded-sm text-lg focus:border-[#7075DB] outline-none"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
+                <button
+                  type="button"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-[#7075DB] focus:outline-none cursor-pointer"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
               </div>
 
               {/* Remember Me & Forgot Password */}
               <div className="flex flex-wrap justify-center items-center text-sm">
-                <p className="text-[#FF8682] cursor-pointer" onClick={()=>setIsOpen(true)}>
+                <p
+                  className="text-[#FF8682] cursor-pointer"
+                  onClick={() => setIsOpen(true)}
+                >
                   Forgot Password?
                 </p>
               </div>
 
               <button
-                className="w-full bg-[#005585] text-lg text-white py-2.5 rounded-lg cursor-pointer"
+                className="w-full bg-[#7075DB] text-lg text-white py-2.5 rounded-lg cursor-pointer"
                 onClick={handleLogin}
               >
                 {loading ? "Logging in..." : "Login"}
