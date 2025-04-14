@@ -38,8 +38,7 @@ const page = ({ passopen, onClose }) => {
   const [confirmPassword, setconfirmPassword] = useState("");
   const [showAlert, setshowAlert] = useState(false);
   const [alermessage, setAlertMessage] = useState("");
-    const [response, setResponse] = useState(null);
-  
+  const [response, setResponse] = useState(null);
 
   const fetchData = async () => {
     if (typeof window !== "undefined") {
@@ -66,13 +65,24 @@ const page = ({ passopen, onClose }) => {
           payload
         );
         setResponse(res.data);
+        // Handle successful login response
 
+        localStorage.setItem(
+          "userData",
+          JSON.stringify({
+            identifier: localStorage.getItem("uhid"),
+            password: userPassword,
+            role: "doctor",
+          })
+        );
+        
         onClose();
       } catch (err) {
         console.error("POST error:", err);
       }
     }
   };
+
 
   const showWarning = (message) => {
     setAlertMessage(message);
