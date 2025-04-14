@@ -41,6 +41,7 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   PencilSquareIcon,
+  CheckCircleIcon,
 } from "@heroicons/react/16/solid";
 import Patientimg from "@/app/assets/patimg.png";
 import Closeicon from "@/app/assets/closeicon.png";
@@ -171,6 +172,97 @@ const page = ({ patient, scoreGroups, userData }) => {
     return size;
   };
   const [surgeryPatient, setsurgeryPatient] = useState({});
+
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split("T")[0];
+  });
+  const [selectedTime, setSelectedTime] = useState("");
+  const [isDateTimeEdited, setIsDateTimeEdited] = useState(false);
+
+  const dateInputRef = useRef(null);
+  const timeInputRef = useRef(null);
+
+  const openDatePicker = () => {
+    dateInputRef.current?.showPicker();
+  };
+
+  const handleClockClick = () => {
+    timeInputRef.current?.showPicker();
+  };
+
+  const handleDateChange = (e) => {
+    const dateValue = e.target.value;
+    if (dateValue) {
+      setSelectedDate(dateValue);
+      handleClockClick(); // Show time picker right after date
+    }
+  };
+
+  const handleTimeChange = (e) => {
+    const timeValue = e.target.value;
+    if (timeValue) {
+      setSelectedTime(timeValue);
+      setIsDateTimeEdited(true);
+    }
+  };
+
+
+  const saveDateTime = async () => {
+    const finalDateTime = `${selectedDate} ${selectedTime}`;
+    console.log("Saved Date & Time:", finalDateTime);
+    setIsDateTimeEdited(false);
+
+    if (!selectedDate || !selectedTime) {
+      setWarning("Please select both date and time.");
+      return;
+    }
+
+    const selectedDateTime = new Date(`${selectedDate}T${selectedTime}`);
+    const now = new Date();
+
+    if (selectedDateTime < now) {
+      setWarning("Selected date and time cannot be in the past.");
+      return;
+    }
+
+    if (!patient?.uhid) {
+      console.error("No patient selected for surgery scheduling.");
+      return;
+    }
+
+    const payload = {
+      uhid: patient?.uhid,
+      surgery_scheduled: {
+        date: selectedDate,
+        time: selectedTime,
+      },
+    };
+
+    try {
+      const response = await fetch(
+        "https://promapi.onrender.com/update-surgery-schedule",
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log("Surgery scheduled successfully:", result);
+      window.location.reload();
+      // Optionally reset form or show success feedback
+    } catch (error) {
+      console.error("Error scheduling surgery:", error);
+    }
+  };
 
   const { width, height } = useWindowSize();
 
@@ -387,13 +479,16 @@ const page = ({ patient, scoreGroups, userData }) => {
   const databox = useBoxPlot(
     (boxPlotData ?? []).map((item, index) => {
       const stats = computeBoxStats(item.boxData, item.dotValue);
-  
-      const isValidDot = stats.average !== undefined && !isNaN(stats.average) && stats.average < 100;
-  
+
+      const isValidDot =
+        stats.average !== undefined &&
+        !isNaN(stats.average) &&
+        stats.average < 100;
+
       if (!isValidDot) {
         stats.average = undefined; // strip rogue dot
       }
-  
+
       return {
         name: item.name,
         x: index * 10,
@@ -401,8 +496,6 @@ const page = ({ patient, scoreGroups, userData }) => {
       };
     })
   );
-  
-  
 
   // SF-12 data processing
   const sf12BoxPlotData = useMemo(() => {
@@ -544,34 +637,41 @@ const page = ({ patient, scoreGroups, userData }) => {
   }, [scoreGroups, patient]);
 
   const allLabels = [
-    "PREOP", "3 WEEKS", "6 WEEKS", "3 MONTHS", "6 MONTHS", "1 YEAR", "2 YEARS"
+    "PREOP",
+    "3 WEEKS",
+    "6 WEEKS",
+    "3 MONTHS",
+    "6 MONTHS",
+    "1 YEAR",
+    "2 YEARS",
   ];
-  
+
   const fjsDatabox = useBoxPlot(
-    (allLabels.map((label, index) => {
+    allLabels.map((label, index) => {
       // Check if data for the label exists
-      const item = fjsBoxPlotData.find(data => data.name === label);
-  
+      const item = fjsBoxPlotData.find((data) => data.name === label);
+
       // If no data is found for that label, use a default value (e.g., null or empty data)
-      const stats = item ? computeBoxStats(item.boxData, item.dotValue) : {
-        min: null,
-        bottomWhisker: null,
-        bottomBox: null,
-        topBox: null,
-        topWhisker: null,
-        median: null,
-        max: null,
-        average: null
-      };
-  
+      const stats = item
+        ? computeBoxStats(item.boxData, item.dotValue)
+        : {
+            min: null,
+            bottomWhisker: null,
+            bottomBox: null,
+            topBox: null,
+            topWhisker: null,
+            median: null,
+            max: null,
+            average: null,
+          };
+
       return {
         name: label,
-        x: index * 10,  // or some other index-based calculation
+        x: index * 10, // or some other index-based calculation
         ...stats,
       };
-    }))
+    })
   );
-  
 
   const isPostSurgeryDetailsFilled = (details) => {
     if (!details) return false;
@@ -720,19 +820,99 @@ const page = ({ patient, scoreGroups, userData }) => {
                           surgeryPatient?.post_surgery_details ||
                             patient?.post_surgery_details
                         ) ? (
-                          <p className="text-green-600 font-bold text-6">
-                            COMPLETED
-                          </p>
+                          <div className="flex items-center gap-2 text-green-600 font-bold text-sm">
+                            <p>COMPLETED</p>
+                            <div className="relative flex items-center gap-2 cursor-pointer">
+                              {/* Hidden date input */}
+                              <input
+                                type="date"
+                                ref={dateInputRef}
+                                value={selectedDate}
+                                onChange={handleDateChange}
+                                className="absolute opacity-0 pointer-events-none w-0 h-0"
+                              />
+
+                              {/* Hidden time input */}
+                              <input
+                                type="time"
+                                ref={timeInputRef}
+                                value={selectedTime}
+                                onChange={handleTimeChange}
+                                className="absolute opacity-0 pointer-events-none w-0 h-0"
+                              />
+
+                              {/* Displayed text to click */}
+                              <p
+                                className="text-sm text-green-600"
+                                onClick={openDatePicker}
+                              >
+                                {selectedDate && selectedTime
+                                  ? `${new Date(
+                                      `${selectedDate}T${selectedTime}`
+                                    ).toLocaleString("en-GB")}`
+                                  : "Select date & time"}
+                              </p>
+
+                              {/* Save icon only when both are filled */}
+                              {isDateTimeEdited && selectedDate && (
+                                <CheckCircleIcon
+                                  className="w-7 h-7 text-blue-600 cursor-pointer"
+                                  onClick={saveDateTime}
+                                  title="Save Date & Time"
+                                />
+                              )}
+                            </div>
+                          </div>
                         ) : (
-                          <>
-                            <p className="text-[#F86060] font-bold text-6">
-                              PENDING
-                            </p>
+                          <div className="flex items-center gap-2 text-[#F86060] font-bold text-sm">
+                            <p>PENDING</p>
+
                             <PencilSquareIcon
                               className="w-5 h-5 text-black cursor-pointer"
                               onClick={() => setIsOpen(true)}
                             />
-                          </>
+
+                            <div className="relative flex items-center gap-2 cursor-pointer">
+                              {/* Hidden date input */}
+                              <input
+                                type="date"
+                                ref={dateInputRef}
+                                value={selectedDate}
+                                onChange={handleDateChange}
+                                className="absolute opacity-0 pointer-events-none w-0 h-0"
+                              />
+
+                              {/* Hidden time input */}
+                              <input
+                                type="time"
+                                ref={timeInputRef}
+                                value={selectedTime}
+                                onChange={handleTimeChange}
+                                className="absolute opacity-0 pointer-events-none w-0 h-0"
+                              />
+
+                              {/* Displayed text to click */}
+                              <p
+                                className="text-sm text-[#F86060]"
+                                onClick={openDatePicker}
+                              >
+                                {selectedDate && selectedTime
+                                  ? `${new Date(
+                                      `${selectedDate}T${selectedTime}`
+                                    ).toLocaleString("en-GB")}`
+                                  : "Select date & time"}
+                              </p>
+
+                              {/* Save icon only when both are filled */}
+                              {isDateTimeEdited && selectedDate && (
+                                <CheckCircleIcon
+                                  className="w-7 h-7 text-blue-600 cursor-pointer"
+                                  onClick={saveDateTime}
+                                  title="Save Date & Time"
+                                />
+                              )}
+                            </div>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -1294,26 +1474,26 @@ const page = ({ patient, scoreGroups, userData }) => {
 
                 <ZAxis type="number" dataKey="size" range={[0, 250]} />
                 <Scatter
-  data={databox.filter(
-    (item) =>
-      item.average !== undefined &&
-      item.average !== null &&
-      !isNaN(item.average) &&
-      item.average < 100 // optional: clamp to realistic max
-  )}
-  dataKey="average"
-  fill="#04CE00"
-  stroke="#04CE00"
-  shape={(props) => (
-    <circle
-      cx={props.cx}
-      cy={props.cy}
-      r={4}
-      fill="#04CE00"
-      stroke="#FFF"
-    />
-  )}
-/>
+                  data={databox.filter(
+                    (item) =>
+                      item.average !== undefined &&
+                      item.average !== null &&
+                      !isNaN(item.average) &&
+                      item.average < 100 // optional: clamp to realistic max
+                  )}
+                  dataKey="average"
+                  fill="#04CE00"
+                  stroke="#04CE00"
+                  shape={(props) => (
+                    <circle
+                      cx={props.cx}
+                      cy={props.cy}
+                      r={4}
+                      fill="#04CE00"
+                      stroke="#FFF"
+                    />
+                  )}
+                />
 
                 <XAxis
                   dataKey="name"
@@ -1497,26 +1677,26 @@ const page = ({ patient, scoreGroups, userData }) => {
 
                 <ZAxis type="number" dataKey="size" range={[0, 250]} />
                 <Scatter
-  data={databox.filter(
-    (item) =>
-      item.average !== undefined &&
-      item.average !== null &&
-      !isNaN(item.average) &&
-      item.average < 100 // Optional: clamp to a reasonable max, adjust as needed
-  )}
-  dataKey="average"
-  fill="#04CE00"
-  stroke="#04CE00"
-  shape={(props) => (
-    <circle
-      cx={props.cx}
-      cy={props.cy}
-      r={4}
-      fill="#04CE00"
-      stroke="#FFF"
-    />
-  )}
-/>
+                  data={databox.filter(
+                    (item) =>
+                      item.average !== undefined &&
+                      item.average !== null &&
+                      !isNaN(item.average) &&
+                      item.average < 100 // Optional: clamp to a reasonable max, adjust as needed
+                  )}
+                  dataKey="average"
+                  fill="#04CE00"
+                  stroke="#04CE00"
+                  shape={(props) => (
+                    <circle
+                      cx={props.cx}
+                      cy={props.cy}
+                      r={4}
+                      fill="#04CE00"
+                      stroke="#FFF"
+                    />
+                  )}
+                />
 
                 <XAxis
                   dataKey="name"
@@ -1712,26 +1892,26 @@ const page = ({ patient, scoreGroups, userData }) => {
 
                 <ZAxis type="number" dataKey="size" range={[0, 250]} />
                 <Scatter
-  data={databox.filter(
-    (item) =>
-      item.average !== undefined &&
-      item.average !== null &&
-      !isNaN(item.average) &&
-      item.average < 100 // Optional: clamp to a reasonable max, adjust as needed
-  )}
-  dataKey="average"
-  fill="#04CE00"
-  stroke="#04CE00"
-  shape={(props) => (
-    <circle
-      cx={props.cx}
-      cy={props.cy}
-      r={4}
-      fill="#04CE00"
-      stroke="#FFF"
-    />
-  )}
-/>
+                  data={databox.filter(
+                    (item) =>
+                      item.average !== undefined &&
+                      item.average !== null &&
+                      !isNaN(item.average) &&
+                      item.average < 100 // Optional: clamp to a reasonable max, adjust as needed
+                  )}
+                  dataKey="average"
+                  fill="#04CE00"
+                  stroke="#04CE00"
+                  shape={(props) => (
+                    <circle
+                      cx={props.cx}
+                      cy={props.cy}
+                      r={4}
+                      fill="#04CE00"
+                      stroke="#FFF"
+                    />
+                  )}
+                />
 
                 <XAxis
                   dataKey="name"
@@ -1746,25 +1926,24 @@ const page = ({ patient, scoreGroups, userData }) => {
                   tickLine={{ stroke: "#615E83" }}
                 />
 
-<YAxis
-  label={{
-    value: "SCORE",
-    angle: -90,
-    position: "insideLeft",
-    offset: 20,
-    style: {
-      textAnchor: "middle",
-      fill: "#615E83",
-      fontSize: 14,
-      fontWeight: "bold",
-    },
-  }}
-  tick={{ fill: "#615E83", fontSize: 16, fontWeight: "500" }}
-  axisLine={{ stroke: "#615E83" }}
-  tickLine={{ stroke: "#615E83" }}
-  domain={[0, 100]}  // Set domain to match your data range
-/>
-
+                <YAxis
+                  label={{
+                    value: "SCORE",
+                    angle: -90,
+                    position: "insideLeft",
+                    offset: 20,
+                    style: {
+                      textAnchor: "middle",
+                      fill: "#615E83",
+                      fontSize: 14,
+                      fontWeight: "bold",
+                    },
+                  }}
+                  tick={{ fill: "#615E83", fontSize: 16, fontWeight: "500" }}
+                  axisLine={{ stroke: "#615E83" }}
+                  tickLine={{ stroke: "#615E83" }}
+                  domain={[0, 100]} // Set domain to match your data range
+                />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -1920,26 +2099,26 @@ const page = ({ patient, scoreGroups, userData }) => {
 
                 <ZAxis type="number" dataKey="size" range={[0, 250]} />
                 <Scatter
-  data={databox.filter(
-    (item) =>
-      item.average !== undefined &&
-      item.average !== null &&
-      !isNaN(item.average) &&
-      item.average < 100 // Optional: clamp to a reasonable max, adjust as needed
-  )}
-  dataKey="average"
-  fill="#04CE00"
-  stroke="#04CE00"
-  shape={(props) => (
-    <circle
-      cx={props.cx}
-      cy={props.cy}
-      r={4}
-      fill="#04CE00"
-      stroke="#FFF"
-    />
-  )}
-/>
+                  data={databox.filter(
+                    (item) =>
+                      item.average !== undefined &&
+                      item.average !== null &&
+                      !isNaN(item.average) &&
+                      item.average < 100 // Optional: clamp to a reasonable max, adjust as needed
+                  )}
+                  dataKey="average"
+                  fill="#04CE00"
+                  stroke="#04CE00"
+                  shape={(props) => (
+                    <circle
+                      cx={props.cx}
+                      cy={props.cy}
+                      r={4}
+                      fill="#04CE00"
+                      stroke="#FFF"
+                    />
+                  )}
+                />
 
                 <XAxis
                   dataKey="name"
@@ -1954,25 +2133,24 @@ const page = ({ patient, scoreGroups, userData }) => {
                   tickLine={{ stroke: "#615E83" }}
                 />
 
-<YAxis
-  label={{
-    value: "SCORE",
-    angle: -90,
-    position: "insideLeft",
-    offset: 20,
-    style: {
-      textAnchor: "middle",
-      fill: "#615E83",
-      fontSize: 14,
-      fontWeight: "bold",
-    },
-  }}
-  tick={{ fill: "#615E83", fontSize: 16, fontWeight: "500" }}
-  axisLine={{ stroke: "#615E83" }}
-  tickLine={{ stroke: "#615E83" }}
-  domain={[0, 100]}  // Set domain to match your data range
-/>
-
+                <YAxis
+                  label={{
+                    value: "SCORE",
+                    angle: -90,
+                    position: "insideLeft",
+                    offset: 20,
+                    style: {
+                      textAnchor: "middle",
+                      fill: "#615E83",
+                      fontSize: 14,
+                      fontWeight: "bold",
+                    },
+                  }}
+                  tick={{ fill: "#615E83", fontSize: 16, fontWeight: "500" }}
+                  axisLine={{ stroke: "#615E83" }}
+                  tickLine={{ stroke: "#615E83" }}
+                  domain={[0, 100]} // Set domain to match your data range
+                />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -2002,48 +2180,48 @@ const page = ({ patient, scoreGroups, userData }) => {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
 
                 <Tooltip
-  content={({ active, payload, label }) => {
-    if (!active || !payload || !Array.isArray(payload)) return null;
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload || !Array.isArray(payload))
+                      return null;
 
-    const safeLabel =
-      typeof label === "number" || typeof label === "string"
-        ? label
-        : "Unknown";
+                    const safeLabel =
+                      typeof label === "number" || typeof label === "string"
+                        ? label
+                        : "Unknown";
 
-    return (
-      <div
-        style={{
-          background: "#fff",
-          padding: "8px",
-          border: "1px solid #ccc",
-        }}
-      >
-        <p
-          style={{ fontWeight: "bold", margin: 0 }}
-        >{`Day: ${safeLabel}`}</p>
-        {payload.map((entry, index) => {
-          const value = entry?.value;
-          return (
-            <p
-              key={index}
-              style={{
-                margin: 0,
-                color: entry?.color ?? "#000",
-              }}
-            >
-              {entry.name}:{" "}
-              {value !== null && typeof value === "number"
-                ? value.toFixed(2)
-                : "No Data Available"}
-            </p>
-          );
-        })}
-      </div>
-    );
-  }}
-  cursor={{ fill: "rgba(97, 94, 131, 0.1)" }}
-/>
-
+                    return (
+                      <div
+                        style={{
+                          background: "#fff",
+                          padding: "8px",
+                          border: "1px solid #ccc",
+                        }}
+                      >
+                        <p
+                          style={{ fontWeight: "bold", margin: 0 }}
+                        >{`Day: ${safeLabel}`}</p>
+                        {payload.map((entry, index) => {
+                          const value = entry?.value;
+                          return (
+                            <p
+                              key={index}
+                              style={{
+                                margin: 0,
+                                color: entry?.color ?? "#000",
+                              }}
+                            >
+                              {entry.name}:{" "}
+                              {value !== null && typeof value === "number"
+                                ? value.toFixed(2)
+                                : "No Data Available"}
+                            </p>
+                          );
+                        })}
+                      </div>
+                    );
+                  }}
+                  cursor={{ fill: "rgba(97, 94, 131, 0.1)" }}
+                />
 
                 <Legend
                   verticalAlign="top"
@@ -2137,26 +2315,26 @@ const page = ({ patient, scoreGroups, userData }) => {
 
                 <ZAxis type="number" dataKey="size" range={[0, 250]} />
                 <Scatter
-  data={databox.filter(
-    (item) =>
-      item.average !== undefined &&
-      item.average !== null &&
-      !isNaN(item.average) &&
-      item.average < 100 // Optional: clamp to a reasonable max, adjust as needed
-  )}
-  dataKey="average"
-  fill="#04CE00"
-  stroke="#04CE00"
-  shape={(props) => (
-    <circle
-      cx={props.cx}
-      cy={props.cy}
-      r={4}
-      fill="#04CE00"
-      stroke="#FFF"
-    />
-  )}
-/>
+                  data={databox.filter(
+                    (item) =>
+                      item.average !== undefined &&
+                      item.average !== null &&
+                      !isNaN(item.average) &&
+                      item.average < 100 // Optional: clamp to a reasonable max, adjust as needed
+                  )}
+                  dataKey="average"
+                  fill="#04CE00"
+                  stroke="#04CE00"
+                  shape={(props) => (
+                    <circle
+                      cx={props.cx}
+                      cy={props.cy}
+                      r={4}
+                      fill="#04CE00"
+                      stroke="#FFF"
+                    />
+                  )}
+                />
                 <XAxis
                   dataKey="name"
                   type="category"
@@ -2170,25 +2348,24 @@ const page = ({ patient, scoreGroups, userData }) => {
                   tickLine={{ stroke: "#615E83" }}
                 />
 
-<YAxis
-  label={{
-    value: "SCORE",
-    angle: -90,
-    position: "insideLeft",
-    offset: 20,
-    style: {
-      textAnchor: "middle",
-      fill: "#615E83",
-      fontSize: 14,
-      fontWeight: "bold",
-    },
-  }}
-  tick={{ fill: "#615E83", fontSize: 16, fontWeight: "500" }}
-  axisLine={{ stroke: "#615E83" }}
-  tickLine={{ stroke: "#615E83" }}
-  domain={[0, 100]}  // Set domain to match your data range
-/>
-
+                <YAxis
+                  label={{
+                    value: "SCORE",
+                    angle: -90,
+                    position: "insideLeft",
+                    offset: 20,
+                    style: {
+                      textAnchor: "middle",
+                      fill: "#615E83",
+                      fontSize: 14,
+                      fontWeight: "bold",
+                    },
+                  }}
+                  tick={{ fill: "#615E83", fontSize: 16, fontWeight: "500" }}
+                  axisLine={{ stroke: "#615E83" }}
+                  tickLine={{ stroke: "#615E83" }}
+                  domain={[0, 100]} // Set domain to match your data range
+                />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
