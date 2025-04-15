@@ -328,7 +328,7 @@ const page = ({ patient, scoreGroups, userData }) => {
         sf12:
           label === "SURGERY"
             ? undefined
-            : getScoreByPeriodAndType(scores, periodKey, "SF-12") || 0,
+            : getScoreByPeriodAndType(scores, periodKey, "SF-12"),
         koos:
           label === "SURGERY"
             ? undefined
@@ -340,7 +340,7 @@ const page = ({ patient, scoreGroups, userData }) => {
         fjs:
           label === "SURGERY"
             ? undefined
-            : getScoreByPeriodAndType(scores, periodKey, "FJS") || 0,
+            : getScoreByPeriodAndType(scores, periodKey, "FJS"),
         _order: timeOrder[label],
       };
     });
@@ -539,7 +539,7 @@ const page = ({ patient, scoreGroups, userData }) => {
     if (!scoreGroups) return [];
     return Object.entries(scoreGroups)
       .filter(([key]) =>
-        key.startsWith("Knee injury and Osteoarthritis Outcome Score (KOOS)")
+        key.startsWith("Knee Injury and Ostheoarthritis Outcome Score (KOOS)")
       )
       .map(([key, values]) => {
         const label = key.split("|")[1];
@@ -548,11 +548,13 @@ const page = ({ patient, scoreGroups, userData }) => {
 
         const patientValue = patient?.questionnaire_scores?.find(
           (s) =>
-            s.name === "Knee injury and Osteoarthritis Outcome Score (KOOS)" &&
+            s.name === "Knee Injury and Ostheoarthritis Outcome Score (KOOS)" &&
             normalizeLabel(s.period) === name
         );
 
         const dotValue = patientValue?.score?.[0] ?? null;
+
+        console.log("KOOS name "+name+" boxdata "+boxData+" Dotvalue "+dotValue);
 
         return {
           name,
@@ -590,6 +592,8 @@ const page = ({ patient, scoreGroups, userData }) => {
         );
 
         const dotValue = patientValue?.score?.[0] ?? null;
+
+        console.log("KSS Name "+name+" Boxdata "+boxData+" Dotvalue "+dotValue);
 
         return {
           name,
@@ -1750,7 +1754,7 @@ const page = ({ patient, scoreGroups, userData }) => {
             }`}
           >
             <p className="font-bold text-sm text-black">
-              KNEE INJURY AND OSTEOARTHRITIS OUTCOME SCORE (KOOS)
+              KNEE INJURY AND OSTHEOARTHRITIS OUTCOME SCORE (KOOS)
             </p>
             <ResponsiveContainer width="100%" height="90%">
               <ComposedChart
@@ -1873,14 +1877,14 @@ const page = ({ patient, scoreGroups, userData }) => {
 
                 {/* Median Line */}
                 <Scatter
-                  data={databox}
+                  data={koosDatabox}
                   shape={(props) => <HorizonBar {...props} dataKey="_median" />}
                   dataKey="_median"
                 />
 
                 {/* Min Line */}
                 <Scatter
-                  data={databox}
+                  data={koosDatabox}
                   shape={(props) => (
                     <HorizonBar {...props} dataKey="_min" stroke="#4A3AFF" />
                   )}
@@ -1889,14 +1893,14 @@ const page = ({ patient, scoreGroups, userData }) => {
 
                 {/* Max Line */}
                 <Scatter
-                  data={databox}
+                  data={koosDatabox}
                   shape={(props) => <HorizonBar {...props} dataKey="_max" />}
                   dataKey="_max"
                 />
 
                 <ZAxis type="number" dataKey="size" range={[0, 250]} />
                 <Scatter
-                  data={databox.filter(
+                  data={koosDatabox.filter(
                     (item) =>
                       item.average !== undefined &&
                       item.average !== null &&
@@ -2080,14 +2084,14 @@ const page = ({ patient, scoreGroups, userData }) => {
 
                 {/* Median Line */}
                 <Scatter
-                  data={databox}
+                  data={kssDatabox}
                   shape={(props) => <HorizonBar {...props} dataKey="_median" />}
                   dataKey="_median"
                 />
 
                 {/* Min Line */}
                 <Scatter
-                  data={databox}
+                  data={kssDatabox}
                   shape={(props) => (
                     <HorizonBar {...props} dataKey="_min" stroke="#4A3AFF" />
                   )}
@@ -2096,14 +2100,14 @@ const page = ({ patient, scoreGroups, userData }) => {
 
                 {/* Max Line */}
                 <Scatter
-                  data={databox}
+                  data={kssDatabox}
                   shape={(props) => <HorizonBar {...props} dataKey="_max" />}
                   dataKey="_max"
                 />
 
                 <ZAxis type="number" dataKey="size" range={[0, 250]} />
                 <Scatter
-                  data={databox.filter(
+                  data={kssDatabox.filter(
                     (item) =>
                       item.average !== undefined &&
                       item.average !== null &&
@@ -2296,14 +2300,14 @@ const page = ({ patient, scoreGroups, userData }) => {
 
                 {/* Median Line */}
                 <Scatter
-                  data={databox}
+                  data={fjsDatabox}
                   shape={(props) => <HorizonBar {...props} dataKey="_median" />}
                   dataKey="_median"
                 />
 
                 {/* Min Line */}
                 <Scatter
-                  data={databox}
+                  data={fjsDatabox}
                   shape={(props) => (
                     <HorizonBar {...props} dataKey="_min" stroke="#4A3AFF" />
                   )}
@@ -2312,14 +2316,14 @@ const page = ({ patient, scoreGroups, userData }) => {
 
                 {/* Max Line */}
                 <Scatter
-                  data={databox}
+                  data={fjsDatabox}
                   shape={(props) => <HorizonBar {...props} dataKey="_max" />}
                   dataKey="_max"
                 />
 
                 <ZAxis type="number" dataKey="size" range={[0, 250]} />
                 <Scatter
-                  data={databox.filter(
+                  data={fjsDatabox.filter(
                     (item) =>
                       item.average !== undefined &&
                       item.average !== null &&
