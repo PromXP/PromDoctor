@@ -689,6 +689,8 @@ const page = ({ patient, scoreGroups, userData }) => {
 
   const [isOpen, setIsOpen] = useState(false);
 
+
+
   return (
     <>
       <div className="flex flex-col md:flex-row w-[95%] mx-auto mt-4 items-center justify-between">
@@ -986,6 +988,8 @@ const page = ({ patient, scoreGroups, userData }) => {
                   content={({ active, payload, label }) => {
                     if (label === "SURGERY" || !active || !payload?.length)
                       return null;
+
+                    console.log("PROM Payload"+payload);
 
                     return (
                       <div className="bg-white p-2 border rounded shadow text-black">
